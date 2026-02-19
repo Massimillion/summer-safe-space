@@ -1,50 +1,40 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Check, ArrowRight } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
 
-// Placeholder packages — will be replaced with admin-configured data from DB
-const packages = [
-  {
-    name: "Small",
-    boxes: 2,
-    price: 275,
-    description: "Perfect for a light packer",
-    features: ["2 large boxes", "Free box delivery & pickup", "Secure summer storage", "Fall delivery included"],
-  },
-  {
-    name: "Medium",
-    boxes: 4,
-    price: 375,
-    popular: true,
-    description: "Our most popular option",
-    features: ["4 large boxes", "Free box delivery & pickup", "Secure summer storage", "Fall delivery included"],
-  },
-  {
-    name: "Large",
-    boxes: 6,
-    price: 475,
-    description: "For the well-prepared student",
-    features: ["6 large boxes", "Free box delivery & pickup", "Secure summer storage", "Fall delivery included"],
-  },
-  {
-    name: "XL",
-    boxes: 8,
-    price: 575,
-    description: "Maximum storage capacity",
-    features: ["8 large boxes", "Free box delivery & pickup", "Secure summer storage", "Fall delivery included"],
-  },
-];
+type Pkg = Tables<"packages">;
+type AddOn = Tables<"add_ons">;
 
-const addOns = [
-  { name: "Bicycle", price: 50 },
-  { name: "Mini Fridge", price: 40 },
-  { name: "Futon / Small Couch", price: 60 },
-  { name: "TV / Monitor", price: 35 },
-  { name: "Extra Box", price: 30 },
+const defaultFeatures = (boxes: number) => [
+  `${boxes} large boxes`,
+  "Free box delivery & pickup",
+  "Secure summer storage",
+  "Fall delivery included",
 ];
 
 const Pricing = () => {
+  const [packages, setPackages] = useState<Pkg[]>([]);
+  const [addOns, setAddOns] = useState<AddOn[]>([]);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const [p, a] = await Promise.all([
+        supabase.from("packages").select("*").eq("is_active", true).order("sort_order"),
+        supabase.from("add_ons").select("*").eq("is_active", true).order("sort_order"),
+      ]);
+      if (p.data) setPackages(p.data);
+      if (a.data) setAddOns(a.data);
+    };
+    fetch();
+  }, []);
+
+  // Mark the 2nd package as popular
+  const popularIndex = 1;
+
   return (
     <>
       <section className="bg-gradient-to-b from-accent to-background py-20">
@@ -63,41 +53,45 @@ const Pricing = () => {
       <section className="py-20">
         <div className="container">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {packages.map((pkg) => (
-              <Card
-                key={pkg.name}
-                className={`relative transition-shadow hover:shadow-lg ${
-                  pkg.popular ? "border-primary shadow-md" : "border-border/60"
-                }`}
-              >
-                {pkg.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
-                    Most Popular
-                  </div>
-                )}
-                <CardHeader className="text-center">
-                  <CardTitle className="font-display text-xl">{pkg.name}</CardTitle>
-                  <CardDescription>{pkg.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="font-display text-4xl font-bold text-foreground">${pkg.price}</span>
-                    <span className="text-sm text-muted-foreground"> / summer</span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {pkg.features.map((f, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Check className="h-4 w-4 text-primary" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button className="mt-6 w-full" variant={pkg.popular ? "default" : "outline"} asChild>
-                    <Link to="/book">Select Plan</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {packages.map((pkg, i) => {
+              const isPopular = i === popularIndex;
+              const price = pkg.price_cents / 100;
+              return (
+                <Card
+                  key={pkg.id}
+                  className={`relative transition-shadow hover:shadow-lg ${
+                    isPopular ? "border-primary shadow-md" : "border-border/60"
+                  }`}
+                >
+                  {isPopular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
+                      Most Popular
+                    </div>
+                  )}
+                  <CardHeader className="text-center">
+                    <CardTitle className="font-display text-xl">{pkg.name}</CardTitle>
+                    <CardDescription>{pkg.description}</CardDescription>
+                    <div className="mt-4">
+                      <span className="font-display text-4xl font-bold text-foreground">${price.toFixed(0)}</span>
+                      <span className="text-sm text-muted-foreground"> / summer</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {defaultFeatures(pkg.num_boxes).map((f, j) => (
+                        <li key={j} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Check className="h-4 w-4 text-primary" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button className="mt-6 w-full" variant={isPopular ? "default" : "outline"} asChild>
+                      <Link to="/book">Select Plan</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -114,11 +108,11 @@ const Pricing = () => {
           <div className="mx-auto mt-10 grid max-w-2xl gap-3">
             {addOns.map((item) => (
               <div
-                key={item.name}
+                key={item.id}
                 className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-3"
               >
                 <span className="font-medium text-foreground">{item.name}</span>
-                <span className="font-display font-semibold text-primary">+${item.price}</span>
+                <span className="font-display font-semibold text-primary">+${(item.price_cents / 100).toFixed(0)}</span>
               </div>
             ))}
           </div>
