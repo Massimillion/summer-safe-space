@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import MarketingLayout from "./components/layout/MarketingLayout";
+import AdminLayout from "./components/admin/AdminLayout";
 import Index from "./pages/Index";
 import HowItWorks from "./pages/HowItWorks";
 import Pricing from "./pages/Pricing";
@@ -13,6 +14,11 @@ import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Book from "./pages/Book";
 import Portal from "./pages/Portal";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminInventory from "./pages/admin/AdminInventory";
+import AdminScheduling from "./pages/admin/AdminScheduling";
+import AdminConfig from "./pages/admin/AdminConfig";
+import AdminBilling from "./pages/admin/AdminBilling";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,7 +41,14 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/book" element={<Book />} />
             <Route path="/portal" element={<Portal />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/orders" replace />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="inventory" element={<AdminInventory />} />
+              <Route path="scheduling" element={<AdminScheduling />} />
+              <Route path="config" element={<AdminConfig />} />
+              <Route path="billing" element={<AdminBilling />} />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
