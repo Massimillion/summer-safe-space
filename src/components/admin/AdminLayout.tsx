@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminSidebar from "./AdminSidebar";
+import squirrelboxLogo from "@/assets/squirrelbox-logo.png";
 
 const AdminLayout = () => {
   const { user, loading } = useAuth();
@@ -46,8 +47,9 @@ const AdminLayout = () => {
         <div className="flex flex-1 flex-col">
           <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-4">
             <SidebarTrigger />
+            <img src={squirrelboxLogo} alt="SquirrelBox" className="h-7 w-7" />
             <span className="font-display text-lg font-bold text-foreground">
-              🐿️ Squirrel<span className="text-primary">Box</span> Admin
+              Squirrel<span className="text-primary">Box</span> Admin
             </span>
           </header>
           <main className="flex-1 overflow-auto p-6">
