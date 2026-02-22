@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import squirrelboxLogo from "@/assets/squirrelbox-logo.png";
 
 const Footer = () => {
   return (
@@ -7,7 +8,7 @@ const Footer = () => {
         <div className="grid gap-8 md:grid-cols-4">
           <div>
             <Link to="/" className="flex items-center gap-2">
-              <span className="text-2xl">🐿️</span>
+              <img src={squirrelboxLogo} alt="SquirrelBox" className="h-8 w-8" />
               <span className="font-display text-lg font-bold text-foreground">
                 Squirrel<span className="text-primary">Box</span>
               </span>
