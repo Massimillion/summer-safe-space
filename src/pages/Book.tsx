@@ -37,7 +37,7 @@ const Book = () => {
   const { user } = useAuth();
 
   // Form state
-  const [studentInfo, setStudentInfo] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const [studentInfo, setStudentInfo] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "" });
   const [parentInfo, setParentInfo] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [school, setSchool] = useState<"cu_boulder" | "du" | "">("");
   const [isOffCampus, setIsOffCampus] = useState(false);
@@ -94,7 +94,7 @@ const Book = () => {
 
   const canProceed = () => {
     switch (step) {
-      case 0: return studentInfo.firstName && studentInfo.lastName && studentInfo.email;
+      case 0: return studentInfo.firstName && studentInfo.lastName && studentInfo.email && studentInfo.password.length >= 6 && studentInfo.password === studentInfo.confirmPassword;
       case 1: return parentInfo.firstName && parentInfo.lastName;
       case 2: return school && (isOffCampus ? addressLine : dormId);
       case 3: return dropoffDateId;
@@ -114,7 +114,7 @@ const Book = () => {
       if (!userId) {
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: studentInfo.email,
-          password: crypto.randomUUID().slice(0, 16) + "Aa1!", // temp password
+          password: studentInfo.password,
           options: { emailRedirectTo: window.location.origin },
         });
         if (authError) throw authError;
@@ -182,7 +182,7 @@ const Book = () => {
         await supabase.from("order_items").insert(orderItems);
       }
 
-      toast({ title: "Booking confirmed! 🎉", description: "Check your email to set your password and access your portal." });
+      toast({ title: "Booking confirmed! 🎉", description: "You can now log in to your portal with your email and password." });
       navigate("/");
     } catch (err: any) {
       toast({ title: "Booking failed", description: err.message, variant: "destructive" });
@@ -253,6 +253,22 @@ const Book = () => {
                   <Label>Phone</Label>
                   <Input type="tel" value={studentInfo.phone} onChange={(e) => setStudentInfo({ ...studentInfo, phone: e.target.value })} />
                 </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Password *</Label>
+                    <Input type="password" placeholder="Min 6 characters" value={studentInfo.password} onChange={(e) => setStudentInfo({ ...studentInfo, password: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Confirm Password *</Label>
+                    <Input type="password" placeholder="Re-enter password" value={studentInfo.confirmPassword} onChange={(e) => setStudentInfo({ ...studentInfo, confirmPassword: e.target.value })} />
+                  </div>
+                </div>
+                {studentInfo.password && studentInfo.confirmPassword && studentInfo.password !== studentInfo.confirmPassword && (
+                  <p className="text-sm text-destructive">Passwords do not match</p>
+                )}
+                {studentInfo.password && studentInfo.password.length < 6 && (
+                  <p className="text-sm text-destructive">Password must be at least 6 characters</p>
+                )}
               </>
             )}
 
