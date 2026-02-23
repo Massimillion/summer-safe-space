@@ -122,23 +122,52 @@ const Book = () => {
       }
       if (!userId) throw new Error("Failed to create account");
 
-      // 2. Create student record
-      const { data: student, error: studentError } = await supabase
+      // 2. Check for existing student or create new one
+      let student: any;
+      const { data: existingStudent } = await supabase
         .from("students")
-        .insert({
-          user_id: userId,
-          first_name: studentInfo.firstName,
-          last_name: studentInfo.lastName,
-          email: studentInfo.email,
-          phone: studentInfo.phone || null,
-          school: school as "cu_boulder" | "du",
-          dorm_id: isOffCampus ? null : dormId || null,
-          address_line: isOffCampus ? addressLine : null,
-          is_off_campus: isOffCampus,
-        })
-        .select()
-        .single();
-      if (studentError) throw studentError;
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existingStudent) {
+        // Update existing student record
+        const { data: updated, error: updateError } = await supabase
+          .from("students")
+          .update({
+            first_name: studentInfo.firstName,
+            last_name: studentInfo.lastName,
+            email: studentInfo.email,
+            phone: studentInfo.phone || null,
+            school: school as "cu_boulder" | "du",
+            dorm_id: isOffCampus ? null : dormId || null,
+            address_line: isOffCampus ? addressLine : null,
+            is_off_campus: isOffCampus,
+          })
+          .eq("id", existingStudent.id)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        student = updated;
+      } else {
+        const { data: newStudent, error: studentError } = await supabase
+          .from("students")
+          .insert({
+            user_id: userId,
+            first_name: studentInfo.firstName,
+            last_name: studentInfo.lastName,
+            email: studentInfo.email,
+            phone: studentInfo.phone || null,
+            school: school as "cu_boulder" | "du",
+            dorm_id: isOffCampus ? null : dormId || null,
+            address_line: isOffCampus ? addressLine : null,
+            is_off_campus: isOffCampus,
+          })
+          .select()
+          .single();
+        if (studentError) throw studentError;
+        student = newStudent;
+      }
 
       // 3. Create parent record
       await supabase.from("parents").insert({
