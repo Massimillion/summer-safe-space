@@ -9,8 +9,8 @@ import type { Tables } from "@/integrations/supabase/types";
 type Pkg = Tables<"packages">;
 type AddOn = Tables<"add_ons">;
 
-const defaultFeatures = (boxes: number) => [
-  `${boxes} large boxes`,
+const defaultFeatures = (pkg: Pkg) => [
+  pkg.description || `${pkg.num_boxes} large boxes`,
   "Free box delivery & pickup",
   "Secure summer storage",
   "Fall delivery included",
@@ -78,7 +78,7 @@ const Pricing = () => {
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2">
-                      {defaultFeatures(pkg.num_boxes).map((f, j) => (
+                      {defaultFeatures(pkg).map((f, j) => (
                         <li key={j} className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Check className="h-4 w-4 text-primary" />
                           {f}
