@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import DepositPayment from "@/components/DepositPayment";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Package = Tables<"packages">;
@@ -26,12 +27,16 @@ const STEPS = [
   "Pickup Date",
   "Package Selection",
   "Comments",
-  "Review & Submit",
+  "Review",
+  "Payment",
 ];
 
 const Book = () => {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -139,7 +144,6 @@ const Book = () => {
         .maybeSingle();
 
       if (existingStudent) {
-        // Update existing student record
         const { data: updated, error: updateError } = await supabase
           .from("students")
           .update({
@@ -228,23 +232,27 @@ const Book = () => {
         await supabase.from("order_items").insert(orderItems);
       }
 
-      // 6. Create Stripe Checkout session for $50 deposit
-      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
-        "create-checkout",
+      // 6. Create PaymentIntent for embedded deposit payment
+      const { data: piData, error: piError } = await supabase.functions.invoke(
+        "create-payment-intent",
         { body: { orderId: order.id } }
       );
-      if (checkoutError) throw checkoutError;
-      if (checkoutData?.error) throw new Error(checkoutData.error);
-      if (checkoutData?.url) {
-        window.location.href = checkoutData.url;
-        return;
-      }
-      throw new Error("No checkout URL returned");
+      if (piError) throw piError;
+      if (piData?.error) throw new Error(piData.error);
+
+      setClientSecret(piData.clientSecret);
+      setOrderId(order.id);
+      setStep(8); // Move to payment step
     } catch (err: any) {
       toast({ title: "Booking failed", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    setPaymentSuccess(true);
+    navigate("/payment-success?order_id=" + orderId);
   };
 
   return (
@@ -284,7 +292,8 @@ const Book = () => {
               {step === 4 && "When should we pick up your packed boxes?"}
               {step === 5 && "Choose your storage package and add-ons"}
               {step === 6 && "Any special instructions?"}
-              {step === 7 && "Review your order before submitting"}
+              {step === 7 && "Review your order"}
+              {step === 8 && "Enter your payment details"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -675,26 +684,58 @@ const Book = () => {
               </div>
             )}
 
-            {/* Navigation */}
-            <div className="flex justify-between pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setStep(step - 1)}
-                disabled={step === 0}
-              >
-                <ArrowLeft className="mr-1 h-4 w-4" /> Back
-              </Button>
+            {/* Step 8: Embedded Payment */}
+            {step === 8 && clientSecret && orderId && (
+              <div className="space-y-4">
+                <div className="rounded-lg bg-primary/10 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Estimated Total</span>
+                    <span className="font-display text-lg font-semibold text-foreground">
+                      ${(calculateTotal() / 100).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-primary/20 pt-2">
+                    <span className="font-display text-lg font-semibold text-foreground">Deposit Due Today</span>
+                    <span className="font-display text-2xl font-bold text-primary">$50.00</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground rounded-md bg-accent px-3 py-2">
+                  💳 Your card will be saved on file. The remaining balance will be charged after pickup.
+                </p>
+                <DepositPayment
+                  clientSecret={clientSecret}
+                  orderId={orderId}
+                  onSuccess={handlePaymentSuccess}
+                />
+              </div>
+            )}
 
-              {step < STEPS.length - 1 ? (
-                <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
-                  Next <ArrowRight className="ml-1 h-4 w-4" />
+            {/* Navigation */}
+            {step < 8 && (
+              <div className="flex justify-between pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(step - 1)}
+                  disabled={step === 0}
+                >
+                  <ArrowLeft className="mr-1 h-4 w-4" /> Back
                 </Button>
-              ) : (
-                <Button onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? "Processing…" : "Pay $50 Deposit & Confirm"} <Check className="ml-1 h-4 w-4" />
-                </Button>
-              )}
-            </div>
+
+                {step < 7 ? (
+                  <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
+                    Next <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? (
+                      <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Saving…</>
+                    ) : (
+                      <>Continue to Payment <ArrowRight className="ml-1 h-4 w-4" /></>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
