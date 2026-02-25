@@ -73,22 +73,31 @@ export type Database = {
       }
       dorms: {
         Row: {
+          description: string | null
           id: string
           is_active: boolean
           name: string
+          requires_address: boolean
           school: Database["public"]["Enums"]["school_enum"]
+          sort_order: number
         }
         Insert: {
+          description?: string | null
           id?: string
           is_active?: boolean
           name: string
+          requires_address?: boolean
           school: Database["public"]["Enums"]["school_enum"]
+          sort_order?: number
         }
         Update: {
+          description?: string | null
           id?: string
           is_active?: boolean
           name?: string
+          requires_address?: boolean
           school?: Database["public"]["Enums"]["school_enum"]
+          sort_order?: number
         }
         Relationships: []
       }
