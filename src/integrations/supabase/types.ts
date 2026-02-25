@@ -151,11 +151,13 @@ export type Database = {
           comments: string | null
           created_at: string
           custom_box_count: number | null
+          deposit_paid: boolean | null
           dropoff_date_id: string | null
           id: string
           package_id: string | null
           pickup_date_id: string | null
           status: Database["public"]["Enums"]["order_status"]
+          stripe_session_id: string | null
           student_id: string
           total_cents: number
           updated_at: string
@@ -164,11 +166,13 @@ export type Database = {
           comments?: string | null
           created_at?: string
           custom_box_count?: number | null
+          deposit_paid?: boolean | null
           dropoff_date_id?: string | null
           id?: string
           package_id?: string | null
           pickup_date_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          stripe_session_id?: string | null
           student_id: string
           total_cents?: number
           updated_at?: string
@@ -177,11 +181,13 @@ export type Database = {
           comments?: string | null
           created_at?: string
           custom_box_count?: number | null
+          deposit_paid?: boolean | null
           dropoff_date_id?: string | null
           id?: string
           package_id?: string | null
           pickup_date_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          stripe_session_id?: string | null
           student_id?: string
           total_cents?: number
           updated_at?: string
@@ -341,6 +347,7 @@ export type Database = {
           last_name: string
           phone: string | null
           school: Database["public"]["Enums"]["school_enum"]
+          stripe_customer_id: string | null
           user_id: string
         }
         Insert: {
@@ -354,6 +361,7 @@ export type Database = {
           last_name: string
           phone?: string | null
           school: Database["public"]["Enums"]["school_enum"]
+          stripe_customer_id?: string | null
           user_id: string
         }
         Update: {
@@ -367,6 +375,7 @@ export type Database = {
           last_name?: string
           phone?: string | null
           school?: Database["public"]["Enums"]["school_enum"]
+          stripe_customer_id?: string | null
           user_id?: string
         }
         Relationships: [
