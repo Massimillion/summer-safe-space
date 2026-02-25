@@ -260,7 +260,7 @@ const Book = () => {
       <div className="container max-w-2xl">
         {/* Progress */}
         <div className="mb-8">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
             {STEPS.map((s, i) => (
               <div
                 key={i}
