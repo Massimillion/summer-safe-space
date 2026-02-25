@@ -139,17 +139,41 @@ const Pricing = () => {
           <p className="mx-auto mt-3 max-w-md text-center text-muted-foreground">
             Have something that doesn't fit in a box? We store those too.
           </p>
-          <div className="mx-auto mt-10 grid max-w-2xl gap-3">
-            {addOns.filter(a => !a.name.toLowerCase().includes("valet")).map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-3"
-              >
-                <span className="font-medium text-foreground">{item.name}</span>
-                <span className="font-display font-semibold text-primary">+${(item.price_cents / 100).toFixed(0)}</span>
+          {(() => {
+            const nonValet = addOns.filter(a => !a.name.toLowerCase().includes("valet"));
+            const boxes = nonValet.filter(a => a.name.toLowerCase().includes("box"));
+            const others = nonValet.filter(a => !a.name.toLowerCase().includes("box"));
+            return (
+              <div className="mx-auto mt-10 max-w-2xl space-y-6">
+                {boxes.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">📦 Extra Boxes</h3>
+                    <div className="grid gap-3">
+                      {boxes.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-3">
+                          <span className="font-medium text-foreground">{item.name}</span>
+                          <span className="font-display font-semibold text-primary">+${(item.price_cents / 100).toFixed(0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {others.length > 0 && (
+                  <div>
+                    <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">🏠 Special Items</h3>
+                    <div className="grid gap-3">
+                      {others.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-3">
+                          <span className="font-medium text-foreground">{item.name}</span>
+                          <span className="font-display font-semibold text-primary">+${(item.price_cents / 100).toFixed(0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })()}
           <div className="mt-10 text-center">
             <Button size="lg" asChild>
               <Link to="/book">
