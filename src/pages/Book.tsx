@@ -376,42 +376,51 @@ const Book = () => {
 
             {/* Step 3: Drop-off Date */}
             {step === 3 && (
-              <div className="space-y-2">
-                <Label>Empty Box Drop-Off Date *</Label>
-                <Select value={dropoffDateId} onValueChange={setDropoffDateId}>
-                  <SelectTrigger><SelectValue placeholder="Select a date" /></SelectTrigger>
-                  <SelectContent>
-                    {filteredDropoffDates.length === 0 && (
-                      <SelectItem value="none" disabled>No dates available yet</SelectItem>
-                    )}
-                    {filteredDropoffDates.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {new Date(d.available_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Empty Box Drop-Off Date *</Label>
+                  <Select value={dropoffDateId} onValueChange={setDropoffDateId}>
+                    <SelectTrigger><SelectValue placeholder="Select a date" /></SelectTrigger>
+                    <SelectContent>
+                      {filteredDropoffDates.length === 0 && (
+                        <SelectItem value="none" disabled>No dates available yet</SelectItem>
+                      )}
+                      {filteredDropoffDates.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {new Date(d.available_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-sm text-muted-foreground rounded-md bg-accent px-3 py-2">
+                  📦 All drop-off times are <span className="font-medium text-foreground">9am – 12pm</span>
+                </p>
               </div>
             )}
 
             {/* Step 4: Pickup Date */}
             {step === 4 && (
-              <div className="space-y-2">
-                <Label>Full Box Pickup Date & Time *</Label>
-                <Select value={pickupDateId} onValueChange={setPickupDateId}>
-                  <SelectTrigger><SelectValue placeholder="Select a date & time" /></SelectTrigger>
-                  <SelectContent>
-                    {filteredPickupDates.length === 0 && (
-                      <SelectItem value="none" disabled>No dates available yet</SelectItem>
-                    )}
-                    {filteredPickupDates.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {new Date(d.available_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-                        {d.time_slot && ` — ${d.time_slot}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label>Full Box Pickup Date *</Label>
+                  <Select value={pickupDateId} onValueChange={setPickupDateId}>
+                    <SelectTrigger><SelectValue placeholder="Select a date" /></SelectTrigger>
+                    <SelectContent>
+                      {filteredPickupDates.length === 0 && (
+                        <SelectItem value="none" disabled>No dates available yet</SelectItem>
+                      )}
+                      {filteredPickupDates.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {new Date(d.available_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-sm text-muted-foreground rounded-md bg-accent px-3 py-2">
+                  🚚 All pickup times are <span className="font-medium text-foreground">9am – 12pm</span>
+                </p>
               </div>
             )}
 
