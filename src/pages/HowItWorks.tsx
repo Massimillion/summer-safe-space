@@ -16,7 +16,7 @@ const steps = [
   {
     icon: Truck,
     title: "3. We Pick Up Your Packed Boxes",
-    desc: "Once you've packed, we come pick everything up on your scheduled date and time.",
+    desc: "Once you've packed, bring your items to the pickup location on your scheduled date. Or upgrade to our Valet Service ($300) and we'll come to your room and move everything out with you!",
   },
   {
     icon: Warehouse,
