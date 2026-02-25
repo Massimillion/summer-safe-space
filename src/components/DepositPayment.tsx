@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Check, Loader2, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 interface DepositPaymentFormProps {
   orderId: string;
@@ -105,6 +106,14 @@ interface DepositPaymentProps {
 }
 
 const DepositPayment = ({ clientSecret, orderId, onSuccess }: DepositPaymentProps) => {
+  if (!stripePromise) {
+    return (
+      <p className="text-sm text-destructive">
+        Stripe is not configured. Please ensure the publishable key is set.
+      </p>
+    );
+  }
+
   return (
     <Elements
       stripe={stripePromise}
