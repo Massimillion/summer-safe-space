@@ -511,28 +511,43 @@ const Book = () => {
                   </button>
                 </div>
 
-                {regularAddOns.length > 0 && (
-                  <>
-                    <Label className="mt-6 block">Special Item Add-Ons</Label>
-                    <div className="space-y-2">
-                      {regularAddOns.map((addOn) => (
-                        <div key={addOn.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-                          <div>
-                            <span className="font-medium text-foreground">{addOn.name}</span>
-                            <span className="ml-2 text-sm text-primary">+${(addOn.price_cents / 100).toFixed(0)}</span>
-                          </div>
-                          <Input
-                            type="number"
-                            min={0}
-                            className="w-20"
-                            value={selectedAddOns[addOn.id] || 0}
-                            onChange={(e) =>
-                              setSelectedAddOns({ ...selectedAddOns, [addOn.id]: parseInt(e.target.value) || 0 })
-                            }
-                          />
-                        </div>
-                      ))}
+                {regularAddOns.length > 0 && (() => {
+                  const boxes = regularAddOns.filter(a => a.name.toLowerCase().includes("box"));
+                  const others = regularAddOns.filter(a => !a.name.toLowerCase().includes("box"));
+                  const renderAddOn = (addOn: AddOn) => (
+                    <div key={addOn.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                      <div>
+                        <span className="font-medium text-foreground">{addOn.name}</span>
+                        <span className="ml-2 text-sm text-primary">+${(addOn.price_cents / 100).toFixed(0)}</span>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="w-20"
+                        value={selectedAddOns[addOn.id] || 0}
+                        onChange={(e) =>
+                          setSelectedAddOns({ ...selectedAddOns, [addOn.id]: parseInt(e.target.value) || 0 })
+                        }
+                      />
                     </div>
+                  );
+                  return (
+                    <div className="space-y-4">
+                      {boxes.length > 0 && (
+                        <div>
+                          <Label className="mt-6 mb-2 block">📦 Extra Boxes</Label>
+                          <div className="space-y-2">{boxes.map(renderAddOn)}</div>
+                        </div>
+                      )}
+                      {others.length > 0 && (
+                        <div>
+                          <Label className="mt-4 mb-2 block">🏠 Special Items</Label>
+                          <div className="space-y-2">{others.map(renderAddOn)}</div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                     {/* Show furniture description box if any furniture add-on is selected */}
                     {addOns.some(
@@ -550,8 +565,6 @@ const Book = () => {
                         />
                       </div>
                     )}
-                  </>
-                )}
               </>
             )}
 
