@@ -1,43 +1,74 @@
 
 
-# Admin Login on the Login Page
+# Stripe Deposit Integration Plan
 
-## How It Works
+## What We Know
+- You have a **Deposit** product in Stripe: `prod_U2tHWjoGA9hS6m` with price `price_1T4nUiAZM1waSADi7PY5VjA5` at **$50.00**
+- The booking flow currently shows the full estimated total and submits the order directly
+- Students already create an account during signup (Step 0), so we have authenticated users
 
-There's no need for a separate admin signup -- that would be a security risk. Instead, admins are created manually by you (the owner) in the database, and they log in through the same login page as students. The system automatically detects if someone is an admin and sends them to the right place.
+## How It Will Work
 
-## What Changes
+**For the student:**
+1. They complete the booking form as usual through all steps
+2. On the Review step (Step 7), they see their **estimated total** AND a clear explanation that they only pay a **$50 deposit now**
+3. The deposit is applied toward their final bill, which is charged to the card on file once pickup is complete
+4. Clicking "Pay Deposit & Confirm" saves their order to the database, then redirects them to Stripe Checkout to pay the $50 deposit
+5. After successful payment, they land on a success page confirming their booking
 
-### 1. Update the Login Page
-After a successful login, the page will check if the user has the "admin" role. If they do, they get redirected to `/admin`. If not, they go to `/portal` as usual.
+**For you (admin):**
+- After pickup, you charge the remaining balance (total minus $50 deposit) from the admin billing page (future enhancement) or directly via Stripe
 
-A small "Admin? Sign in here" toggle or link will be added below the student login, which simply changes the description text and redirect behavior -- keeping the page clean while making it clear admins can log in there too.
+## Technical Steps
 
-### 2. Fix the Logo (Bonus)
-The login page still has the old squirrel emoji instead of the new SquirrelBox logo -- this will be updated to match the rest of the site.
+### 1. Create an Edge Function: `create-checkout`
+- Receives the order ID from the frontend
+- Authenticates the user
+- Creates or finds a Stripe customer by email
+- Creates a Stripe Checkout session in `payment` mode with `setup_future_usage: 'off_session'` — this charges the $50 deposit AND saves the card for future charges
+- Returns the checkout URL
 
-### 3. How to Create Admin Accounts (Secure Process)
+### 2. Add a `stripe_customer_id` column to the `students` table
+- So we can reference the Stripe customer later when charging the remaining balance
 
-To add Luke (or anyone) as an admin:
+### 3. Add `deposit_paid` boolean and `stripe_session_id` to the `orders` table
+- Track whether the deposit has been paid
+- Store the Stripe session ID for reference
 
-1. **They sign up** on the site like a normal user (or you create their account)
-2. **You tell me their email**, and I run a database command to assign them the "admin" role
+### 4. Create an Edge Function: `verify-payment`
+- Called when the student returns to the success page
+- Verifies the Checkout session status with Stripe
+- Updates the order's `deposit_paid` to true
+- Records the payment in the `payments` table
+- Saves the `stripe_customer_id` on the student record
 
-This keeps it secure because:
-- There is no public admin signup -- only you can grant admin access
-- The role is stored in a separate secure table with strict access policies already in place
-- The admin check happens server-side, so it can't be faked
+### 5. Update the Booking Flow (`Book.tsx`)
+- On the Review step, redesign the pricing section to show:
+  - **Estimated Total**: $XXX (the full calculated amount)
+  - **Deposit Due Today**: $50.00
+  - **Remaining Balance**: $XXX (charged after pickup)
+  - A clear note: "Your card will be saved on file. The remaining balance will be charged once we've picked up and verified your items."
+- Change the submit button text to **"Pay $50 Deposit & Confirm"**
+- After saving the order to the database, invoke the `create-checkout` edge function and redirect to Stripe
 
-## Technical Details
+### 6. Create a Payment Success Page
+- New route `/payment-success`
+- Calls `verify-payment` to confirm the deposit
+- Shows a confirmation message with order details and next steps
 
-**File: `src/pages/Login.tsx`**
-- Import the SquirrelBox logo asset
-- Add an `isAdminLogin` toggle state
-- After successful `signInWithPassword`, call `supabase.rpc("has_role", { _user_id: user.id, _role: "admin" })` to check the role
-- If admin toggle is on and user has the role, navigate to `/admin`
-- If admin toggle is on but user is NOT an admin, show an error toast ("You don't have admin access")
-- If admin toggle is off, navigate to `/portal` as before
-- Add a subtle text link below the form: "Admin? Sign in here" that toggles the mode, changing the card description to "Sign in to the admin dashboard"
+### 7. Database Migration
+```text
+ALTER TABLE students ADD COLUMN stripe_customer_id text;
+ALTER TABLE orders ADD COLUMN deposit_paid boolean DEFAULT false;
+ALTER TABLE orders ADD COLUMN stripe_session_id text;
+```
 
-**No database changes needed** -- the `user_roles` table and `has_role` function already exist.
+### Files to Create/Modify
+- **Create**: `supabase/functions/create-checkout/index.ts`
+- **Create**: `supabase/functions/verify-payment/index.ts`
+- **Create**: `src/pages/PaymentSuccess.tsx`
+- **Modify**: `src/pages/Book.tsx` (Review step UI + submit logic)
+- **Modify**: `src/App.tsx` (add `/payment-success` route)
+- **Modify**: `supabase/config.toml` (edge function JWT settings)
+- **Database migration**: Add columns to `students` and `orders` tables
 
