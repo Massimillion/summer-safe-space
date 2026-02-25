@@ -228,8 +228,18 @@ const Book = () => {
         await supabase.from("order_items").insert(orderItems);
       }
 
-      toast({ title: "Booking confirmed! 🎉", description: "You can now log in to your portal with your email and password." });
-      navigate("/");
+      // 6. Create Stripe Checkout session for $50 deposit
+      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
+        "create-checkout",
+        { body: { orderId: order.id } }
+      );
+      if (checkoutError) throw checkoutError;
+      if (checkoutData?.error) throw new Error(checkoutData.error);
+      if (checkoutData?.url) {
+        window.location.href = checkoutData.url;
+        return;
+      }
+      throw new Error("No checkout URL returned");
     } catch (err: any) {
       toast({ title: "Booking failed", description: err.message, variant: "destructive" });
     } finally {
@@ -641,14 +651,27 @@ const Book = () => {
                   </div>
                 )}
 
-                <div className="rounded-lg bg-primary/10 p-4">
+                <div className="rounded-lg bg-primary/10 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-display text-lg font-semibold text-foreground">Total</span>
-                    <span className="font-display text-2xl font-bold text-primary">
+                    <span className="text-sm text-muted-foreground">Estimated Total</span>
+                    <span className="font-display text-lg font-semibold text-foreground">
                       ${(calculateTotal() / 100).toFixed(2)}
                     </span>
                   </div>
+                  <div className="flex items-center justify-between border-t border-primary/20 pt-2">
+                    <span className="font-display text-lg font-semibold text-foreground">Deposit Due Today</span>
+                    <span className="font-display text-2xl font-bold text-primary">$50.00</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Remaining Balance</span>
+                    <span className="text-sm font-medium text-foreground">
+                      ${(Math.max(0, calculateTotal() - 5000) / 100).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
+                <p className="text-xs text-muted-foreground rounded-md bg-accent px-3 py-2">
+                  💳 Your card will be saved on file. The remaining balance will be charged once we've picked up and verified your items.
+                </p>
               </div>
             )}
 
@@ -668,7 +691,7 @@ const Book = () => {
                 </Button>
               ) : (
                 <Button onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? "Submitting…" : "Confirm Booking"} <Check className="ml-1 h-4 w-4" />
+                  {submitting ? "Processing…" : "Pay $50 Deposit & Confirm"} <Check className="ml-1 h-4 w-4" />
                 </Button>
               )}
             </div>
