@@ -40,7 +40,6 @@ const Book = () => {
   const [studentInfo, setStudentInfo] = useState({ firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "" });
   const [parentInfo, setParentInfo] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [school, setSchool] = useState<"cu_boulder" | "du" | "">("");
-  const [isOffCampus, setIsOffCampus] = useState(false);
   const [dormId, setDormId] = useState("");
   const [addressLine, setAddressLine] = useState("");
   const [dropoffDateId, setDropoffDateId] = useState("");
@@ -63,7 +62,7 @@ const Book = () => {
       const [pkgRes, addOnRes, dormRes, dateRes] = await Promise.all([
         supabase.from("packages").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("add_ons").select("*").eq("is_active", true).order("sort_order"),
-        supabase.from("dorms").select("*").eq("is_active", true),
+        supabase.from("dorms").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("available_dates").select("*").eq("is_active", true).order("available_date"),
       ]);
       if (pkgRes.data) setPackages(pkgRes.data);
@@ -78,6 +77,8 @@ const Book = () => {
   }, []);
 
   const filteredDorms = dorms.filter((d) => d.school === school);
+  const selectedDorm = dorms.find((d) => d.id === dormId);
+  const requiresAddress = selectedDorm ? (selectedDorm as any).requires_address : false;
   const filteredDropoffDates = dropoffDates.filter((d) => d.school === school);
   const filteredPickupDates = pickupDates.filter((d) => d.school === school);
 
@@ -97,7 +98,7 @@ const Book = () => {
     switch (step) {
       case 0: return studentInfo.firstName && studentInfo.lastName && studentInfo.email && studentInfo.password.length >= 6 && studentInfo.password === studentInfo.confirmPassword;
       case 1: return parentInfo.firstName && parentInfo.lastName;
-      case 2: return school && (isOffCampus ? addressLine : dormId);
+      case 2: return school && dormId && (requiresAddress ? addressLine : true);
       case 3: return dropoffDateId;
       case 4: return pickupDateId;
       case 5: return selectedPackageId || (customBoxCount && customBoxCount > 0);
@@ -141,9 +142,9 @@ const Book = () => {
             email: studentInfo.email,
             phone: studentInfo.phone || null,
             school: school as "cu_boulder" | "du",
-            dorm_id: isOffCampus ? null : dormId || null,
-            address_line: isOffCampus ? addressLine : null,
-            is_off_campus: isOffCampus,
+            dorm_id: dormId || null,
+            address_line: requiresAddress ? addressLine : null,
+            is_off_campus: requiresAddress,
           })
           .eq("id", existingStudent.id)
           .select()
@@ -160,9 +161,9 @@ const Book = () => {
             email: studentInfo.email,
             phone: studentInfo.phone || null,
             school: school as "cu_boulder" | "du",
-            dorm_id: isOffCampus ? null : dormId || null,
-            address_line: isOffCampus ? addressLine : null,
-            is_off_campus: isOffCampus,
+            dorm_id: dormId || null,
+            address_line: requiresAddress ? addressLine : null,
+            is_off_campus: requiresAddress,
           })
           .select()
           .single();
@@ -331,7 +332,7 @@ const Book = () => {
               <>
                 <div className="space-y-2">
                   <Label>School *</Label>
-                  <Select value={school} onValueChange={(v) => { setSchool(v as any); setDormId(""); }}>
+                  <Select value={school} onValueChange={(v) => { setSchool(v as any); setDormId(""); setAddressLine(""); }}>
                     <SelectTrigger><SelectValue placeholder="Select your school" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cu_boulder">CU Boulder</SelectItem>
@@ -340,32 +341,34 @@ const Book = () => {
                   </Select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Checkbox id="off-campus" checked={isOffCampus} onCheckedChange={(c) => setIsOffCampus(!!c)} />
-                  <Label htmlFor="off-campus">I live off-campus</Label>
-                </div>
-
-                {!isOffCampus && school && (
+                {school && (
                   <div className="space-y-2">
-                    <Label>Dorm / Building *</Label>
-                    <Select value={dormId} onValueChange={setDormId}>
-                      <SelectTrigger><SelectValue placeholder="Select your dorm" /></SelectTrigger>
+                    <Label>Location *</Label>
+                    <Select value={dormId} onValueChange={(v) => { setDormId(v); setAddressLine(""); }}>
+                      <SelectTrigger><SelectValue placeholder="Select your location" /></SelectTrigger>
                       <SelectContent>
                         {filteredDorms.length === 0 && (
-                          <SelectItem value="none" disabled>No dorms configured yet</SelectItem>
+                          <SelectItem value="none" disabled>No locations configured yet</SelectItem>
                         )}
                         {filteredDorms.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                          <SelectItem key={d.id} value={d.id}>
+                            <div className="flex flex-col">
+                              <span>{d.name}</span>
+                              {(d as any).description && (
+                                <span className="text-xs text-muted-foreground">{(d as any).description}</span>
+                              )}
+                            </div>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 )}
 
-                {isOffCampus && (
+                {requiresAddress && (
                   <div className="space-y-2">
-                    <Label>Address *</Label>
-                    <Input value={addressLine} onChange={(e) => setAddressLine(e.target.value)} placeholder="123 Main St, Apt 4B" />
+                    <Label>{school === "cu_boulder" ? "Apartment Name & Address *" : "Address *"}</Label>
+                    <Input value={addressLine} onChange={(e) => setAddressLine(e.target.value)} placeholder={school === "cu_boulder" ? "e.g. Bear Creek Apartments, 123 Main St" : "e.g. 123 Main St, Apt 4B"} />
                   </div>
                 )}
               </>
@@ -535,7 +538,8 @@ const Book = () => {
                   <h4 className="text-sm font-semibold text-muted-foreground">School & Location</h4>
                   <p className="text-foreground">{school === "cu_boulder" ? "CU Boulder" : "University of Denver"}</p>
                   <p className="text-sm text-muted-foreground">
-                    {isOffCampus ? addressLine : dorms.find((d) => d.id === dormId)?.name || "—"}
+                    {selectedDorm?.name || "—"}
+                    {requiresAddress && addressLine && ` — ${addressLine}`}
                   </p>
                 </div>
                 <div>
