@@ -49,6 +49,7 @@ const Book = () => {
   const [selectedAddOns, setSelectedAddOns] = useState<Record<string, number>>({});
   const [comments, setComments] = useState("");
   const [furnitureDescription, setFurnitureDescription] = useState("");
+  const [valetSelected, setValetSelected] = useState(false);
 
   // Data from DB
   const [packages, setPackages] = useState<Package[]>([]);
@@ -84,9 +85,14 @@ const Book = () => {
 
   const selectedPackage = packages.find((p) => p.id === selectedPackageId);
 
+  // Separate valet add-on from regular add-ons
+  const valetAddOn = addOns.find((a) => a.name.toLowerCase().includes("valet"));
+  const regularAddOns = addOns.filter((a) => !a.name.toLowerCase().includes("valet"));
+
   const calculateTotal = () => {
     let total = 0;
     if (selectedPackage) total += selectedPackage.price_cents;
+    if (valetSelected && valetAddOn) total += valetAddOn.price_cents;
     Object.entries(selectedAddOns).forEach(([addOnId, qty]) => {
       const addOn = addOns.find((a) => a.id === addOnId);
       if (addOn && qty > 0) total += addOn.price_cents * qty;
@@ -196,7 +202,7 @@ const Book = () => {
         .single();
       if (orderError) throw orderError;
 
-      // 5. Create order items for add-ons
+      // 5. Create order items for add-ons + valet
       const orderItems = Object.entries(selectedAddOns)
         .filter(([, qty]) => qty > 0)
         .map(([addOnId, qty]) => {
@@ -209,6 +215,15 @@ const Book = () => {
             description: addOn.name,
           };
         });
+      if (valetSelected && valetAddOn) {
+        orderItems.push({
+          order_id: order.id,
+          add_on_id: valetAddOn.id,
+          quantity: 1,
+          price_cents: valetAddOn.price_cents,
+          description: "Valet Service",
+        });
+      }
       if (orderItems.length > 0) {
         await supabase.from("order_items").insert(orderItems);
       }
@@ -469,11 +484,38 @@ const Book = () => {
                   </div>
                 )}
 
-                {addOns.length > 0 && (
+                {/* Valet Service Choice */}
+                <Label className="mt-6 block">Service Type</Label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setValetSelected(false)}
+                    className={`rounded-lg border p-4 text-left transition-colors ${
+                      !valetSelected ? "border-primary bg-accent" : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-display font-semibold text-foreground">Standard</div>
+                    <div className="text-sm text-muted-foreground">You bring items to the pickup location</div>
+                    <div className="mt-1 font-display text-lg font-bold text-primary">Included</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setValetSelected(true)}
+                    className={`rounded-lg border p-4 text-left transition-colors ${
+                      valetSelected ? "border-primary bg-accent" : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-display font-semibold text-foreground">Valet Service</div>
+                    <div className="text-sm text-muted-foreground">We come to your room &amp; move everything out with you</div>
+                    <div className="mt-1 font-display text-lg font-bold text-primary">+$300</div>
+                  </button>
+                </div>
+
+                {regularAddOns.length > 0 && (
                   <>
                     <Label className="mt-6 block">Special Item Add-Ons</Label>
                     <div className="space-y-2">
-                      {addOns.map((addOn) => (
+                      {regularAddOns.map((addOn) => (
                         <div key={addOn.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
                           <div>
                             <span className="font-medium text-foreground">{addOn.name}</span>
@@ -556,6 +598,11 @@ const Book = () => {
                   <p className="text-foreground">
                     {selectedPackage ? `${selectedPackage.name} (${selectedPackage.num_boxes} boxes)` : `Custom: ${customBoxCount} boxes`}
                   </p>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground">Service Type</h4>
+                  <p className="text-foreground">{valetSelected ? "Valet Service (+$300)" : "Standard (self drop-off)"}</p>
                 </div>
 
                 {Object.entries(selectedAddOns).filter(([, qty]) => qty > 0).length > 0 && (

@@ -96,6 +96,40 @@ const Pricing = () => {
         </div>
       </section>
 
+      {/* Valet Service */}
+      <section className="border-t border-border py-20">
+        <div className="container">
+          <div className="mx-auto max-w-2xl">
+            <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-accent">
+              <CardHeader className="text-center">
+                <CardTitle className="font-display text-2xl">🚚 Valet Service</CardTitle>
+                <CardDescription className="text-base">
+                  Don't want to carry everything yourself? We've got you.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-center">
+                <p className="text-muted-foreground">
+                  Our team comes to your dorm room (accompanied by you) and moves everything out for you.
+                  No heavy lifting required.
+                </p>
+                <div>
+                  <span className="font-display text-4xl font-bold text-primary">$300</span>
+                  <span className="text-sm text-muted-foreground"> add-on</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Without valet, you simply bring your packed items to the designated pickup location.
+                </p>
+                <Button size="lg" asChild>
+                  <Link to="/book">
+                    Book with Valet <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Add-ons */}
       <section className="border-t border-border bg-secondary/30 py-20">
         <div className="container">
@@ -106,7 +140,7 @@ const Pricing = () => {
             Have something that doesn't fit in a box? We store those too.
           </p>
           <div className="mx-auto mt-10 grid max-w-2xl gap-3">
-            {addOns.map((item) => (
+            {addOns.filter(a => !a.name.toLowerCase().includes("valet")).map((item) => (
               <div
                 key={item.id}
                 className="flex items-center justify-between rounded-lg border border-border bg-card px-5 py-3"
