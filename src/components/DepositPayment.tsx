@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Loader2, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
+const stripePromise = loadStripe("pk_live_d3JyKgg7AbQAVrpvTkJuZ8fn");
 
 interface DepositPaymentFormProps {
   orderId: string;
