@@ -49,6 +49,7 @@ const Book = () => {
   const [customBoxCount, setCustomBoxCount] = useState<number | null>(null);
   const [selectedAddOns, setSelectedAddOns] = useState<Record<string, number>>({});
   const [comments, setComments] = useState("");
+  const [furnitureDescription, setFurnitureDescription] = useState("");
 
   // Data from DB
   const [packages, setPackages] = useState<Package[]>([]);
@@ -187,7 +188,7 @@ const Book = () => {
           custom_box_count: customBoxCount,
           dropoff_date_id: dropoffDateId || null,
           pickup_date_id: pickupDateId || null,
-          comments: comments || null,
+          comments: [comments, furnitureDescription ? `Furniture items: ${furnitureDescription}` : ""].filter(Boolean).join("\n") || null,
           total_cents: calculateTotal(),
         })
         .select()
@@ -478,6 +479,23 @@ const Book = () => {
                         </div>
                       ))}
                     </div>
+
+                    {/* Show furniture description box if any furniture add-on is selected */}
+                    {addOns.some(
+                      (a) =>
+                        (a.name.toLowerCase().includes("furniture") || a.name.toLowerCase().includes("person carry")) &&
+                        (selectedAddOns[a.id] || 0) > 0
+                    ) && (
+                      <div className="space-y-2">
+                        <Label>Please describe your furniture item(s) *</Label>
+                        <Textarea
+                          value={furnitureDescription}
+                          onChange={(e) => setFurnitureDescription(e.target.value)}
+                          placeholder="e.g. IKEA desk, standing lamp, small bookshelf..."
+                          rows={3}
+                        />
+                      </div>
+                    )}
                   </>
                 )}
               </>
