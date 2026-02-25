@@ -37,61 +37,80 @@ serve(async (req) => {
       });
     }
 
-    const { paymentIntentId, orderId } = await req.json();
-    if (!paymentIntentId || !orderId) throw new Error("paymentIntentId and orderId are required");
+    const userEmail = claimsData.claims.email as string;
+
+    const { orderId } = await req.json();
+    if (!orderId) throw new Error("orderId is required");
+
+    // Verify the order belongs to this user
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("id, total_cents, student_id, students(id, email, stripe_customer_id)")
+      .eq("id", orderId)
+      .single();
+
+    if (orderError || !order) throw new Error("Order not found");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
       apiVersion: "2025-08-27.basil",
     });
 
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    // Find or create Stripe customer
+    const student = (order as any).students;
+    let customerId = student?.stripe_customer_id;
 
-    if (paymentIntent.status !== "succeeded") {
-      return new Response(
-        JSON.stringify({ error: "Payment not completed", status: paymentIntent.status }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+    if (!customerId) {
+      const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+      } else {
+        const customer = await stripe.customers.create({ email: userEmail });
+        customerId = customer.id;
+      }
+
+      // Save stripe_customer_id on the student record
+      const adminClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
+      await adminClient
+        .from("students")
+        .update({ stripe_customer_id: customerId })
+        .eq("id", student.id);
     }
 
+    // Create a PaymentIntent for $50 deposit with card saved for future use
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: 5000,
+      currency: "usd",
+      customer: customerId,
+      setup_future_usage: "off_session",
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        order_id: orderId,
+        type: "deposit",
+      },
+    });
+
+    // Save payment intent ID on the order
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-
-    // Mark order as deposit paid
     await adminClient
       .from("orders")
-      .update({ deposit_paid: true })
+      .update({ stripe_session_id: paymentIntent.id })
       .eq("id", orderId);
 
-    // Record payment
-    await adminClient.from("payments").insert({
-      order_id: orderId,
-      amount_cents: paymentIntent.amount,
-      payment_type: "stripe_deposit",
-      stripe_payment_id: paymentIntentId,
-      description: "Deposit payment",
-    });
-
-    // Save stripe_customer_id on student if not already set
-    if (paymentIntent.customer) {
-      const { data: order } = await adminClient
-        .from("orders")
-        .select("student_id")
-        .eq("id", orderId)
-        .single();
-
-      if (order) {
-        await adminClient
-          .from("students")
-          .update({ stripe_customer_id: paymentIntent.customer as string })
-          .eq("id", order.student_id);
-      }
-    }
-
     return new Response(
-      JSON.stringify({ success: true }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      JSON.stringify({
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
     );
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
