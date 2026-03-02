@@ -46,7 +46,13 @@ const Footer = () => {
         </div>
 
         <div className="mt-8 border-t border-border pt-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} SquirrelBox Storage. All rights reserved.
+          <p>© {new Date().getFullYear()} SquirrelBox Storage. All rights reserved.</p>
+          <p className="mt-1 text-xs text-muted-foreground/60">
+            Website by{" "}
+            <a href="https://onwardsandupwards.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+              Onwards and Upwards LLC
+            </a>
+          </p>
         </div>
       </div>
     </footer>
