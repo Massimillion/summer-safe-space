@@ -13,17 +13,49 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
+  const [checking, setChecking] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecovery(true);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+    // Supabase appends tokens as hash fragments (#access_token=...&type=recovery)
+    // We need to parse them and let Supabase client handle the session exchange
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get("type");
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+
+    if (type === "recovery" && accessToken) {
+      // Set the session from the hash tokens
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || "",
+      }).then(({ error }) => {
+        if (error) {
+          toast({ title: "Invalid or expired link", description: error.message, variant: "destructive" });
+        } else {
+          setIsRecovery(true);
+        }
+        setChecking(false);
+      });
+    } else {
+      // Also listen for the PASSWORD_RECOVERY event as a fallback
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY") {
+          setIsRecovery(true);
+          setChecking(false);
+        }
+      });
+
+      // Give it a moment, then stop checking
+      const timeout = setTimeout(() => setChecking(false), 3000);
+
+      return () => {
+        subscription.unsubscribe();
+        clearTimeout(timeout);
+      };
+    }
+  }, [toast]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,12 +95,16 @@ const ResetPassword = () => {
               </span>
             </Link>
             <CardTitle className="font-display text-2xl">Reset Password</CardTitle>
-            <CardDescription>Waiting for recovery link verification…</CardDescription>
+            <CardDescription>
+              {checking ? "Verifying your reset link…" : "This reset link is invalid or has expired."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-sm text-muted-foreground">
-              If you followed a link from your email, please wait a moment. Otherwise,{" "}
-              <Link to="/login" className="text-primary hover:underline">return to login</Link>.
+              {checking
+                ? "Please wait a moment."
+                : <>Try requesting a new reset link from the{" "}<Link to="/login" className="text-primary hover:underline">login page</Link>.</>
+              }
             </p>
           </CardContent>
         </Card>
