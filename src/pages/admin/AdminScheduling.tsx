@@ -59,14 +59,15 @@ const AdminScheduling = () => {
   };
 
   const fetchAppointments = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("orders")
       .select(`
         id, status, total_cents, comments, deposit_paid,
         packages(name, num_boxes),
         students(first_name, last_name, email, phone, school, address_line, dorms(name)),
         dropoff_date:available_dates!orders_dropoff_date_id_fkey(available_date, time_slot),
-        pickup_date:available_dates!orders_pickup_date_id_fkey(available_date, time_slot)
+        pickup_date:available_dates!orders_pickup_date_id_fkey(available_date, time_slot),
+        order_items(description, quantity)
       `)
       .neq("status", "cancelled")
       .order("created_at", { ascending: false });
@@ -91,6 +92,7 @@ const AdminScheduling = () => {
         dropoff_time: o.dropoff_date?.time_slot ?? null,
         pickup_date: o.pickup_date?.available_date ?? null,
         pickup_time: o.pickup_date?.time_slot ?? null,
+        items: o.order_items ?? [],
       }));
       setAppointments(mapped);
     }
