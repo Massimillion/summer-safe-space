@@ -40,6 +40,7 @@ interface OrderAppointment {
   pickup_date: string | null;
   pickup_time: string | null;
   items: OrderItem[];
+  hasValet: boolean;
 }
 
 const AdminScheduling = () => {
@@ -93,6 +94,7 @@ const AdminScheduling = () => {
         pickup_date: o.pickup_date?.available_date ?? null,
         pickup_time: o.pickup_date?.time_slot ?? null,
         items: o.order_items ?? [],
+        hasValet: (o.order_items ?? []).some((i: any) => i.description?.toLowerCase().includes("valet")),
       }));
       setAppointments(mapped);
     }
@@ -257,6 +259,7 @@ const AdminScheduling = () => {
                   <TableHead>Location</TableHead>
                   <TableHead>Package</TableHead>
                   <TableHead>Items</TableHead>
+                  <TableHead>Valet</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Deposit</TableHead>
                 </TableRow>
@@ -304,6 +307,11 @@ const AdminScheduling = () => {
                       ) : (
                         <span className="text-xs text-muted-foreground">Package only</span>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={o.hasValet ? "default" : "outline"} className="text-xs">
+                        {o.hasValet ? "Yes" : "No"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusColor(o.status) as any}>
