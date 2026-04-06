@@ -15,6 +15,11 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type AvailableDate = Tables<"available_dates">;
 
+interface OrderItem {
+  description: string | null;
+  quantity: number;
+}
+
 interface OrderAppointment {
   id: string;
   status: string;
@@ -34,6 +39,7 @@ interface OrderAppointment {
   dropoff_time: string | null;
   pickup_date: string | null;
   pickup_time: string | null;
+  items: OrderItem[];
 }
 
 const AdminScheduling = () => {
@@ -53,14 +59,15 @@ const AdminScheduling = () => {
   };
 
   const fetchAppointments = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("orders")
       .select(`
         id, status, total_cents, comments, deposit_paid,
         packages(name, num_boxes),
         students(first_name, last_name, email, phone, school, address_line, dorms(name)),
         dropoff_date:available_dates!orders_dropoff_date_id_fkey(available_date, time_slot),
-        pickup_date:available_dates!orders_pickup_date_id_fkey(available_date, time_slot)
+        pickup_date:available_dates!orders_pickup_date_id_fkey(available_date, time_slot),
+        order_items(description, quantity)
       `)
       .neq("status", "cancelled")
       .order("created_at", { ascending: false });
@@ -85,6 +92,7 @@ const AdminScheduling = () => {
         dropoff_time: o.dropoff_date?.time_slot ?? null,
         pickup_date: o.pickup_date?.available_date ?? null,
         pickup_time: o.pickup_date?.time_slot ?? null,
+        items: o.order_items ?? [],
       }));
       setAppointments(mapped);
     }
@@ -248,6 +256,7 @@ const AdminScheduling = () => {
                   <TableHead>Contact</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Package</TableHead>
+                  <TableHead>Items</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Deposit</TableHead>
                 </TableRow>
@@ -280,6 +289,20 @@ const AdminScheduling = () => {
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {o.items.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {o.items.map((item, idx) => (
+                            <div key={idx} className="text-xs">
+                              {item.quantity > 1 && <span className="font-medium">{item.quantity}× </span>}
+                              {item.description || "Item"}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Package only</span>
                       )}
                     </TableCell>
                     <TableCell>
