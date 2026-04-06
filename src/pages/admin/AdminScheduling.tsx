@@ -256,6 +256,7 @@ const AdminScheduling = () => {
                   <TableHead>Contact</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Package</TableHead>
+                  <TableHead>Items</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Deposit</TableHead>
                 </TableRow>
@@ -288,6 +289,20 @@ const AdminScheduling = () => {
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {o.items.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {o.items.map((item, idx) => (
+                            <div key={idx} className="text-xs">
+                              {item.quantity > 1 && <span className="font-medium">{item.quantity}× </span>}
+                              {item.description || "Item"}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Package only</span>
                       )}
                     </TableCell>
                     <TableCell>
