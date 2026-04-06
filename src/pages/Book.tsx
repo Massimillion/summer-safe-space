@@ -55,6 +55,7 @@ const Book = () => {
   const [comments, setComments] = useState("");
   const [furnitureDescription, setFurnitureDescription] = useState("");
   const [valetSelected, setValetSelected] = useState(false);
+  const [storageTerm, setStorageTerm] = useState<"summer" | "study_abroad">("summer");
 
   // Data from DB
   const [packages, setPackages] = useState<Package[]>([]);
@@ -95,14 +96,22 @@ const Book = () => {
   const regularAddOns = addOns.filter((a) => !a.name.toLowerCase().includes("valet"));
 
   const calculateTotal = () => {
-    let total = 0;
-    if (selectedPackage) total += selectedPackage.price_cents;
-    if (valetSelected && valetAddOn) total += valetAddOn.price_cents;
+    let storageBase = 0;
+    if (selectedPackage) storageBase += selectedPackage.price_cents;
     Object.entries(selectedAddOns).forEach(([addOnId, qty]) => {
       const addOn = addOns.find((a) => a.id === addOnId);
-      if (addOn && qty > 0) total += addOn.price_cents * qty;
+      if (addOn && qty > 0) storageBase += addOn.price_cents * qty;
     });
-    return total;
+
+    // Study abroad: double the storage cost (excluding valet)
+    if (storageTerm === "study_abroad") {
+      storageBase = storageBase * 2;
+    }
+
+    // Add valet on top (one-time service, not doubled)
+    if (valetSelected && valetAddOn) storageBase += valetAddOn.price_cents;
+
+    return storageBase;
   };
 
   const canProceed = () => {
@@ -223,7 +232,8 @@ const Book = () => {
           pickup_date_id: pickupDateId || null,
           comments: [comments, furnitureDescription ? `Furniture items: ${furnitureDescription}` : ""].filter(Boolean).join("\n") || null,
           total_cents: calculateTotal(),
-        })
+          storage_term: storageTerm,
+        } as any)
         .select()
         .single();
       if (orderError) throw orderError;
@@ -548,6 +558,32 @@ const Book = () => {
                   </div>
                 )}
 
+                {/* Storage Term */}
+                <Label className="mt-6 block">Storage Term *</Label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setStorageTerm("summer")}
+                    className={`rounded-lg border p-4 text-left transition-colors ${
+                      storageTerm === "summer" ? "border-primary bg-accent" : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-display font-semibold text-foreground">Summer Storage</div>
+                    <div className="text-sm text-muted-foreground">Store over the summer break</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStorageTerm("study_abroad")}
+                    className={`rounded-lg border p-4 text-left transition-colors ${
+                      storageTerm === "study_abroad" ? "border-primary bg-accent" : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-display font-semibold text-foreground">Summer + Study Abroad</div>
+                    <div className="text-sm text-muted-foreground">Extended storage through your study abroad term</div>
+                    <div className="mt-1 text-xs text-primary font-medium">2× storage price (valet excluded)</div>
+                  </button>
+                </div>
+
                 {/* Valet Service Choice */}
                 <Label className="mt-6 block">Service Type</Label>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -677,6 +713,10 @@ const Book = () => {
                   </p>
                 </div>
 
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground">Storage Term</h4>
+                  <p className="text-foreground">{storageTerm === "study_abroad" ? "Summer + Study Abroad (2× storage)" : "Summer Storage"}</p>
+                </div>
                 <div>
                   <h4 className="text-sm font-semibold text-muted-foreground">Service Type</h4>
                   <p className="text-foreground">{valetSelected ? "Valet Service (+$300)" : "Standard (self drop-off)"}</p>
