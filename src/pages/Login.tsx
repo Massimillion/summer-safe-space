@@ -16,6 +16,26 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const [resetSent, setResetSent] = useState(false);
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({ title: "Enter your email", description: "Please enter your email address first.", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      setResetSent(true);
+      toast({ title: "Check your email", description: "We sent a password reset link to your inbox." });
+    }
+    setLoading(false);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -88,6 +108,14 @@ const Login = () => {
                 required
               />
             </div>
+            <div className="flex justify-end">
+              <button type="button" onClick={handleForgotPassword} className="text-xs text-muted-foreground hover:text-primary hover:underline">
+                Forgot password?
+              </button>
+            </div>
+            {resetSent && (
+              <p className="text-sm text-center text-green-600">Reset link sent — check your inbox.</p>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in…" : "Sign In"}
             </Button>

@@ -20,6 +20,7 @@ import AdminScheduling from "./pages/admin/AdminScheduling";
 import AdminConfig from "./pages/admin/AdminConfig";
 import AdminBilling from "./pages/admin/AdminBilling";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
             </Route>
             <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/book" element={<Book />} />
             <Route path="/portal" element={<Portal />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
