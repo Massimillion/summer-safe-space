@@ -259,6 +259,7 @@ const AdminScheduling = () => {
                   <TableHead>Location</TableHead>
                   <TableHead>Package</TableHead>
                   <TableHead>Items</TableHead>
+                  <TableHead>Valet</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Deposit</TableHead>
                 </TableRow>
