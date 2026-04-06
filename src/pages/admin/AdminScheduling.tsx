@@ -94,6 +94,7 @@ const AdminScheduling = () => {
         pickup_date: o.pickup_date?.available_date ?? null,
         pickup_time: o.pickup_date?.time_slot ?? null,
         items: o.order_items ?? [],
+        hasValet: (o.order_items ?? []).some((i: any) => i.description?.toLowerCase().includes("valet")),
       }));
       setAppointments(mapped);
     }
