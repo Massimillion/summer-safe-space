@@ -1,18 +1,28 @@
 
 
-## Add "Built By" Credit to Footer
+## Add Forgot Password for Admin Login
 
-**What**: Add a subtle developer credit line in the footer, below the copyright notice.
+There is currently no forgot password functionality anywhere in the app. This plan adds a "Forgot password?" link that appears on both student and admin login views, plus a `/reset-password` page to handle the reset flow.
 
-**Where**: `src/components/layout/Footer.tsx` — append a small line after the existing copyright text.
+### Changes
 
-**Implementation**:
-- Add a new line beneath `© 2025 SquirrelBox Storage. All rights reserved.`
-- Text like: `Website by [Your Company Name]` with an external link to your company's URL
-- Styled smaller and subtler than the copyright (e.g., `text-xs text-muted-foreground/60`)
-- Link opens in a new tab (`target="_blank" rel="noopener noreferrer"`)
+**1. Update `src/pages/Login.tsx`**
+- Add a "Forgot password?" button below the password field (before the Sign In button)
+- Show it in both student and admin login modes
+- On click, call `supabase.auth.resetPasswordForEmail(email)` with `redirectTo` pointing to `/reset-password`
+- Show a toast confirming the reset email was sent (or error if email is empty)
 
-**Design**: Keeps it professional and non-intrusive — a single line, muted color, small font.
+**2. Create `src/pages/ResetPassword.tsx`**
+- New page at `/reset-password`
+- Detects the `type=recovery` token in the URL hash (Supabase appends this)
+- Shows a form with new password + confirm password fields
+- Calls `supabase.auth.updateUser({ password })` to set the new password
+- On success, redirects to `/login` with a success toast
 
-I'll need your **company name** and **website URL** to add the credit.
+**3. Update `src/App.tsx`**
+- Add route: `<Route path="/reset-password" element={<ResetPassword />} />`
+
+### Design
+- The "Forgot password?" link will be a small text button aligned right under the password field, styled as `text-xs text-muted-foreground hover:text-primary`
+- The reset password page will use the same Card layout as the login page for visual consistency
 
