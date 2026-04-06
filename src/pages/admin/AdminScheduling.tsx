@@ -309,6 +309,11 @@ const AdminScheduling = () => {
                       )}
                     </TableCell>
                     <TableCell>
+                      <Badge variant={o.hasValet ? "default" : "outline"} className="text-xs">
+                        {o.hasValet ? "Yes" : "No"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={statusColor(o.status) as any}>
                         {o.status.replace(/_/g, " ")}
                       </Badge>
