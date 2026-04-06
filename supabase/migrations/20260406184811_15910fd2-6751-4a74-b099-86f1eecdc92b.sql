@@ -1,0 +1,1 @@
+ALTER TABLE public.orders ADD COLUMN storage_term text NOT NULL DEFAULT 'summer';

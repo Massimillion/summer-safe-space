@@ -157,6 +157,7 @@ export type Database = {
           package_id: string | null
           pickup_date_id: string | null
           status: Database["public"]["Enums"]["order_status"]
+          storage_term: string
           stripe_session_id: string | null
           student_id: string
           total_cents: number
@@ -172,6 +173,7 @@ export type Database = {
           package_id?: string | null
           pickup_date_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          storage_term?: string
           stripe_session_id?: string | null
           student_id: string
           total_cents?: number
@@ -187,6 +189,7 @@ export type Database = {
           package_id?: string | null
           pickup_date_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          storage_term?: string
           stripe_session_id?: string | null
           student_id?: string
           total_cents?: number
