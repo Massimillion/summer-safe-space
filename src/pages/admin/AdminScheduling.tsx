@@ -40,6 +40,7 @@ interface OrderAppointment {
   pickup_date: string | null;
   pickup_time: string | null;
   items: OrderItem[];
+  hasValet: boolean;
 }
 
 const AdminScheduling = () => {
