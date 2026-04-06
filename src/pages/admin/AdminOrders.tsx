@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Pencil } from "lucide-react";
+import EditOrderDialog from "@/components/admin/EditOrderDialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Order = Tables<"orders">;
@@ -24,6 +26,11 @@ const statusLabels: Record<string, string> = {
 
 const statusOptions = ["booked", "boxes_delivered", "boxes_picked_up", "in_storage", "delivered_back", "cancelled"] as const;
 
+const termLabels: Record<string, string> = {
+  summer: "Summer",
+  study_abroad: "Summer + Study Abroad",
+};
+
 const AdminOrders = () => {
   const [orders, setOrders] = useState<(Order & { student?: Student })[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -31,6 +38,8 @@ const AdminOrders = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<(Order & { student?: Student }) | null>(null);
+  const [editOrder, setEditOrder] = useState<(Order & { student?: Student }) | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -105,6 +114,7 @@ const AdminOrders = () => {
               <TableRow>
                 <TableHead>Student</TableHead>
                 <TableHead>School</TableHead>
+                <TableHead>Term</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Date</TableHead>
@@ -113,7 +123,7 @@ const AdminOrders = () => {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No orders found</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No orders found</TableCell></TableRow>
               )}
               {filtered.map((order) => (
                 <TableRow key={order.id}>
@@ -122,6 +132,11 @@ const AdminOrders = () => {
                     <div className="text-xs text-muted-foreground">{order.student?.email}</div>
                   </TableCell>
                   <TableCell>{order.student?.school === "cu_boulder" ? "CU Boulder" : "DU"}</TableCell>
+                  <TableCell>
+                    <Badge variant={order.storage_term === "study_abroad" ? "default" : "outline"} className="text-xs">
+                      {termLabels[order.storage_term] || order.storage_term}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)}>
                       <SelectTrigger className="h-8 w-36">
@@ -139,27 +154,37 @@ const AdminOrders = () => {
                   <TableCell>${(order.total_cents / 100).toFixed(2)}</TableCell>
                   <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                   <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" onClick={() => setSelectedOrder(order)}>View</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle className="font-display">Order Details</DialogTitle>
-                        </DialogHeader>
-                        {selectedOrder && (
-                          <div className="space-y-3 text-sm">
-                            <div><span className="font-semibold">Student:</span> {selectedOrder.student?.first_name} {selectedOrder.student?.last_name}</div>
-                            <div><span className="font-semibold">Email:</span> {selectedOrder.student?.email}</div>
-                            <div><span className="font-semibold">Phone:</span> {selectedOrder.student?.phone || "—"}</div>
-                            <div><span className="font-semibold">School:</span> {selectedOrder.student?.school === "cu_boulder" ? "CU Boulder" : "DU"}</div>
-                            <div><span className="font-semibold">Status:</span> {statusLabels[selectedOrder.status]}</div>
-                            <div><span className="font-semibold">Total:</span> ${(selectedOrder.total_cents / 100).toFixed(2)}</div>
-                            {selectedOrder.comments && <div><span className="font-semibold">Comments:</span> {selectedOrder.comments}</div>}
-                          </div>
-                        )}
-                      </DialogContent>
-                    </Dialog>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setEditOrder(order); setEditOpen(true); }}
+                      >
+                        <Pencil className="mr-1 h-3 w-3" /> Edit
+                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(order)}>View</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg">
+                          <DialogHeader>
+                            <DialogTitle className="font-display">Order Details</DialogTitle>
+                          </DialogHeader>
+                          {selectedOrder && (
+                            <div className="space-y-3 text-sm">
+                              <div><span className="font-semibold">Student:</span> {selectedOrder.student?.first_name} {selectedOrder.student?.last_name}</div>
+                              <div><span className="font-semibold">Email:</span> {selectedOrder.student?.email}</div>
+                              <div><span className="font-semibold">Phone:</span> {selectedOrder.student?.phone || "—"}</div>
+                              <div><span className="font-semibold">School:</span> {selectedOrder.student?.school === "cu_boulder" ? "CU Boulder" : "DU"}</div>
+                              <div><span className="font-semibold">Storage Term:</span> {termLabels[selectedOrder.storage_term] || selectedOrder.storage_term}</div>
+                              <div><span className="font-semibold">Status:</span> {statusLabels[selectedOrder.status]}</div>
+                              <div><span className="font-semibold">Total:</span> ${(selectedOrder.total_cents / 100).toFixed(2)}</div>
+                              {selectedOrder.comments && <div><span className="font-semibold">Comments:</span> {selectedOrder.comments}</div>}
+                            </div>
+                          )}
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -167,6 +192,13 @@ const AdminOrders = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <EditOrderDialog
+        order={editOrder}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={fetchData}
+      />
     </div>
   );
 };

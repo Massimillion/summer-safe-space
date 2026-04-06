@@ -15,6 +15,11 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type AvailableDate = Tables<"available_dates">;
 
+interface OrderItem {
+  description: string | null;
+  quantity: number;
+}
+
 interface OrderAppointment {
   id: string;
   status: string;
@@ -34,6 +39,7 @@ interface OrderAppointment {
   dropoff_time: string | null;
   pickup_date: string | null;
   pickup_time: string | null;
+  items: OrderItem[];
 }
 
 const AdminScheduling = () => {
