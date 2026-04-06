@@ -33,7 +33,7 @@ const termLabels: Record<string, string> = {
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState<(Order & { student?: Student })[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [_students, setStudents] = useState<Student[]>([]);
   const [filterSchool, setFilterSchool] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
