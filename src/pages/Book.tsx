@@ -130,8 +130,30 @@ const Book = () => {
           password: studentInfo.password,
           options: { emailRedirectTo: window.location.origin },
         });
-        if (authError) throw authError;
-        userId = authData.user?.id;
+
+        if (authError) {
+          // If user already exists, try signing in instead
+          if (authError.message.toLowerCase().includes("already registered") || authError.message.toLowerCase().includes("already been registered")) {
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email: studentInfo.email,
+              password: studentInfo.password,
+            });
+            if (signInError) {
+              toast({
+                title: "Account already exists",
+                description: "An account with this email already exists. Please use the correct password or reset your password from the login page.",
+                variant: "destructive",
+              });
+              setSubmitting(false);
+              return;
+            }
+            userId = signInData.user?.id;
+          } else {
+            throw authError;
+          }
+        } else {
+          userId = authData.user?.id;
+        }
       }
       if (!userId) throw new Error("Failed to create account");
 
@@ -328,6 +350,29 @@ const Book = () => {
                     <Input type="password" placeholder="Re-enter password" value={studentInfo.confirmPassword} onChange={(e) => setStudentInfo({ ...studentInfo, confirmPassword: e.target.value })} />
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Already have an account? Use your existing password.{" "}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!studentInfo.email) {
+                        toast({ title: "Enter your email first", variant: "destructive" });
+                        return;
+                      }
+                      const { error } = await supabase.auth.resetPasswordForEmail(studentInfo.email, {
+                        redirectTo: `${window.location.origin}/reset-password`,
+                      });
+                      if (error) {
+                        toast({ title: "Error", description: error.message, variant: "destructive" });
+                      } else {
+                        toast({ title: "Check your email", description: "We sent a password reset link to your inbox." });
+                      }
+                    }}
+                    className="text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </p>
                 {studentInfo.password && studentInfo.confirmPassword && studentInfo.password !== studentInfo.confirmPassword && (
                   <p className="text-sm text-destructive">Passwords do not match</p>
                 )}
