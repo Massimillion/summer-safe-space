@@ -152,7 +152,7 @@ const OrderCard = ({ order }: { order: OrderData }) => {
                   </div>
                 )}
                 {/* Add-on items */}
-                {order.items.map((item, i) => (
+                {order.items.map((item) => (
                   <div key={item.id} className={cn("flex justify-between px-3 py-2 text-sm border-t border-border")}>
                     <span className="text-foreground">
                       {item.quantity > 1 && `${item.quantity}× `}

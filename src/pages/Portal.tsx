@@ -31,7 +31,7 @@ const Portal = () => {
         .from("orders")
         .select(`
           *,
-          packages ( name, num_boxes ),
+          packages ( name, num_boxes, price_cents ),
           dropoff_date:available_dates!orders_dropoff_date_id_fkey ( available_date, time_slot ),
           pickup_date:available_dates!orders_pickup_date_id_fkey ( available_date, time_slot ),
           order_items ( id, description, quantity, price_cents ),
@@ -60,6 +60,7 @@ const Portal = () => {
         comments: o.comments,
         package_name: o.packages?.name ?? null,
         num_boxes: o.packages?.num_boxes ?? null,
+        package_price_cents: o.packages?.price_cents ?? null,
         dropoff_date: o.dropoff_date?.available_date ?? null,
         dropoff_time: o.dropoff_date?.time_slot ?? null,
         pickup_date: o.pickup_date?.available_date ?? null,
