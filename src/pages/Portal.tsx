@@ -151,7 +151,12 @@ const Portal = () => {
             <div className="mt-6 space-y-4">
               <h2 className="font-display text-xl font-semibold text-foreground">Your Orders</h2>
               {orders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  studentSchool={studentSchool}
+                  onOrderUpdated={() => setRefreshKey((k) => k + 1)}
+                />
               ))}
             </div>
           </>
