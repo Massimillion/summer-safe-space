@@ -29,6 +29,7 @@ interface OrderData {
   comments: string | null;
   package_name: string | null;
   num_boxes: number | null;
+  package_price_cents: number | null;
   dropoff_date: string | null;
   dropoff_time: string | null;
   pickup_date: string | null;
@@ -131,30 +132,41 @@ const OrderCard = ({ order }: { order: OrderData }) => {
               </div>
             )}
 
-            {/* Items */}
-            {order.items.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Box className="h-4 w-4 text-muted-foreground" />
-                  <p className="text-sm font-medium">Items</p>
-                </div>
-                <div className="rounded-md border border-border">
-                  {order.items.map((item, i) => (
-                    <div key={item.id} className={cn("flex justify-between px-3 py-2 text-sm", i > 0 && "border-t border-border")}>
-                      <span className="text-foreground">
-                        {item.quantity > 1 && `${item.quantity}× `}
-                        {item.description || "Item"}
-                      </span>
-                      <span className="text-muted-foreground">${(item.price_cents / 100).toFixed(2)}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between px-3 py-2 text-sm font-medium border-t border-border bg-muted/30">
-                    <span>Total</span>
-                    <span>${(order.total_cents / 100).toFixed(2)}</span>
+            {/* Price Breakdown */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Box className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">Order Breakdown</p>
+              </div>
+              <div className="rounded-md border border-border">
+                {/* Package line */}
+                {order.package_name && (
+                  <div className="flex justify-between px-3 py-2 text-sm">
+                    <span className="text-foreground">
+                      {order.package_name}
+                      {order.num_boxes ? ` (${order.num_boxes} boxes)` : ""}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {order.package_price_cents != null ? `$${(order.package_price_cents / 100).toFixed(2)}` : "—"}
+                    </span>
                   </div>
+                )}
+                {/* Add-on items */}
+                {order.items.map((item, i) => (
+                  <div key={item.id} className={cn("flex justify-between px-3 py-2 text-sm border-t border-border")}>
+                    <span className="text-foreground">
+                      {item.quantity > 1 && `${item.quantity}× `}
+                      {item.description || "Item"}
+                    </span>
+                    <span className="text-muted-foreground">${(item.price_cents / 100).toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between px-3 py-2 text-sm font-medium border-t border-border bg-muted/30">
+                  <span>Total</span>
+                  <span>${(order.total_cents / 100).toFixed(2)}</span>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Payments */}
             {order.payments.length > 0 && (
