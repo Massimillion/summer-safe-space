@@ -122,21 +122,6 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const newTotal = calculateTotal();
-
-      // Update order
-      const { error: orderErr } = await supabase
-        .from("orders")
-        .update({
-          package_id: packageId || null,
-          dropoff_date_id: dropoffDateId || null,
-          pickup_date_id: pickupDateId || null,
-          storage_term: storageTerm,
-          comments: comments || null,
-          total_cents: newTotal,
-        })
-        .eq("id", order.id);
-      if (orderErr) throw orderErr;
 
       // Delete existing order items, then re-insert
       await supabase.from("order_items").delete().eq("order_id", order.id);
