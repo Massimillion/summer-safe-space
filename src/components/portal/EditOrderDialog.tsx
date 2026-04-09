@@ -122,22 +122,6 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const newTotal = calculateTotal();
-
-      // Update order
-      const { error: orderErr } = await supabase
-        .from("orders")
-        .update({
-          package_id: packageId || null,
-          dropoff_date_id: dropoffDateId || null,
-          pickup_date_id: pickupDateId || null,
-          storage_term: storageTerm,
-          comments: comments || null,
-          total_cents: newTotal,
-        })
-        .eq("id", order.id);
-      if (orderErr) throw orderErr;
-
       // Delete existing order items, then re-insert
       await supabase.from("order_items").delete().eq("order_id", order.id);
 
@@ -167,6 +151,17 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
         const { error: itemErr } = await supabase.from("order_items").insert(newItems);
         if (itemErr) throw itemErr;
       }
+
+      // Use secure RPC to update order (recalculates total server-side)
+      const { error: rpcErr } = await supabase.rpc("update_order_details", {
+        _order_id: order.id,
+        _package_id: packageId || null,
+        _dropoff_date_id: dropoffDateId || null,
+        _pickup_date_id: pickupDateId || null,
+        _storage_term: storageTerm,
+        _comments: comments || null,
+      });
+      if (rpcErr) throw rpcErr;
 
       toast({ title: "Order updated", description: "Your changes have been saved." });
       onOpenChange(false);

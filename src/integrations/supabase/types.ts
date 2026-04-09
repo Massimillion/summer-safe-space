@@ -459,6 +459,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_order_details: {
+        Args: {
+          _comments?: string
+          _dropoff_date_id?: string
+          _order_id: string
+          _package_id?: string
+          _pickup_date_id?: string
+          _storage_term?: string
+          _total_cents?: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
