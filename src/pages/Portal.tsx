@@ -22,12 +22,12 @@ const Portal = () => {
     const fetchData = async () => {
       const { data: student } = await supabase
         .from("students")
-        .select("id, dorm_id")
+        .select("id, dorm_id, school")
         .eq("user_id", user.id)
         .single();
 
       if (!student) { setLoading(false); return; }
-      setStudentSchool(student.dorm_id ? null : null); // will set below
+      setStudentSchool(student.school);
 
       // Fetch orders with related data
       const { data: ordersData } = await supabase
