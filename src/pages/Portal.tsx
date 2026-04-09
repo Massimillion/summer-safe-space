@@ -12,7 +12,9 @@ import type { OrderData } from "@/components/portal/OrderCard";
 const Portal = () => {
   const { user, signOut } = useAuth();
   const [orders, setOrders] = useState<OrderData[]>([]);
+  const [studentSchool, setStudentSchool] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -25,6 +27,7 @@ const Portal = () => {
         .single();
 
       if (!student) { setLoading(false); return; }
+      setStudentSchool(student.dorm_id ? null : null); // will set below
 
       // Fetch orders with related data
       const { data: ordersData } = await supabase
