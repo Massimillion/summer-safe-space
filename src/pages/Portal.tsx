@@ -12,7 +12,9 @@ import type { OrderData } from "@/components/portal/OrderCard";
 const Portal = () => {
   const { user, signOut } = useAuth();
   const [orders, setOrders] = useState<OrderData[]>([]);
+  const [studentSchool, setStudentSchool] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -20,11 +22,12 @@ const Portal = () => {
     const fetchData = async () => {
       const { data: student } = await supabase
         .from("students")
-        .select("id, dorm_id")
+        .select("id, dorm_id, school")
         .eq("user_id", user.id)
         .single();
 
       if (!student) { setLoading(false); return; }
+      setStudentSchool(student.school);
 
       // Fetch orders with related data
       const { data: ordersData } = await supabase
@@ -74,7 +77,7 @@ const Portal = () => {
       setLoading(false);
     };
     fetchData();
-  }, [user]);
+  }, [user, refreshKey]);
 
   if (!user) {
     return (
@@ -148,7 +151,12 @@ const Portal = () => {
             <div className="mt-6 space-y-4">
               <h2 className="font-display text-xl font-semibold text-foreground">Your Orders</h2>
               {orders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  studentSchool={studentSchool}
+                  onOrderUpdated={() => setRefreshKey((k) => k + 1)}
+                />
               ))}
             </div>
           </>

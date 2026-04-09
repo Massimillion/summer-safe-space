@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Package, CalendarDays, MapPin, Box, CreditCard } from "lucide-react";
+import { ChevronDown, Package, CalendarDays, MapPin, Box, CreditCard, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import EditOrderDialog from "./EditOrderDialog";
 
 interface OrderItemRow {
   id: string;
@@ -67,10 +69,18 @@ const formatDate = (d: string | null) => {
   });
 };
 
-const OrderCard = ({ order }: { order: OrderData }) => {
+interface OrderCardProps {
+  order: OrderData;
+  studentSchool?: string | null;
+  onOrderUpdated?: () => void;
+}
+
+const OrderCard = ({ order, studentSchool, onOrderUpdated }: OrderCardProps) => {
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const totalPaid = order.payments.reduce((s, p) => s + p.amount_cents, 0);
   const balance = order.total_cents - totalPaid;
+  const canEdit = order.status === "booked";
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -89,7 +99,18 @@ const OrderCard = ({ order }: { order: OrderData }) => {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-muted-foreground hover:text-primary"
+                    onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    Edit
+                  </Button>
+                )}
                 <Badge className={cn("border-0", statusColors[order.status] || "")}>
                   {statusLabels[order.status] || order.status}
                 </Badge>
@@ -202,6 +223,16 @@ const OrderCard = ({ order }: { order: OrderData }) => {
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      {canEdit && (
+        <EditOrderDialog
+          order={order}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSaved={onOrderUpdated || (() => {})}
+          studentSchool={studentSchool || null}
+        />
+      )}
     </Collapsible>
   );
 };
