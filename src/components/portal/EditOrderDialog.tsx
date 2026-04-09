@@ -7,15 +7,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import type { OrderData } from "./OrderCard";
 
 type Package = Tables<"packages">;
 type AddOn = Tables<"add_ons">;
-type AvailableDate = Tables<"available_dates">;
 
 interface EditOrderDialogProps {
   order: OrderData;
@@ -25,64 +22,44 @@ interface EditOrderDialogProps {
   studentSchool: string | null;
 }
 
-const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: EditOrderDialogProps) => {
+const EditOrderDialog = ({ order, open, onOpenChange, onSaved }: EditOrderDialogProps) => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [packages, setPackages] = useState<Package[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
-  const [dropoffDates, setDropoffDates] = useState<AvailableDate[]>([]);
-  const [pickupDates, setPickupDates] = useState<AvailableDate[]>([]);
 
-  // Edit state
   const [packageId, setPackageId] = useState("");
-  const [storageTerm, setStorageTerm] = useState("summer");
-  const [dropoffDateId, setDropoffDateId] = useState("");
-  const [pickupDateId, setPickupDateId] = useState("");
-  const [comments, setComments] = useState("");
   const [selectedAddOns, setSelectedAddOns] = useState<Record<string, number>>({});
   const [valetSelected, setValetSelected] = useState(false);
 
   // Load reference data
   useEffect(() => {
     if (!open) return;
-    const fetch = async () => {
-      const [pkgRes, addOnRes, dateRes] = await Promise.all([
+    const fetchData = async () => {
+      const [pkgRes, addOnRes] = await Promise.all([
         supabase.from("packages").select("*").eq("is_active", true).order("sort_order"),
         supabase.from("add_ons").select("*").eq("is_active", true).order("sort_order"),
-        supabase.from("available_dates").select("*").eq("is_active", true).order("available_date"),
       ]);
       if (pkgRes.data) setPackages(pkgRes.data);
       if (addOnRes.data) setAddOns(addOnRes.data);
-      if (dateRes.data) {
-        const school = studentSchool || "";
-        setDropoffDates(dateRes.data.filter((d) => d.date_type === "dropoff" && d.school === school));
-        setPickupDates(dateRes.data.filter((d) => d.date_type === "pickup" && d.school === school));
-      }
     };
-    fetch();
-  }, [open, studentSchool]);
+    fetchData();
+  }, [open]);
 
   // Initialize form from order
   useEffect(() => {
     if (!open) return;
-
-    // We need to look up order's current package_id and date IDs from DB
     const init = async () => {
       const { data: orderRow } = await supabase
         .from("orders")
-        .select("package_id, dropoff_date_id, pickup_date_id, storage_term, comments")
+        .select("package_id, storage_term")
         .eq("id", order.id)
         .single();
 
       if (orderRow) {
         setPackageId(orderRow.package_id || "");
-        setDropoffDateId(orderRow.dropoff_date_id || "");
-        setPickupDateId(orderRow.pickup_date_id || "");
-        setStorageTerm(orderRow.storage_term || "summer");
-        setComments(orderRow.comments || "");
       }
 
-      // Load existing order items to set add-on selections
       const { data: items } = await supabase
         .from("order_items")
         .select("add_on_id, quantity, description")
@@ -107,14 +84,16 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
   const regularAddOns = addOns.filter((a) => !a.name.toLowerCase().includes("valet"));
   const selectedPackage = packages.find((p) => p.id === packageId);
 
-  const calculateTotal = () => {
+  // Display-only total (actual total is computed server-side)
+  const calculateDisplayTotal = () => {
     let base = 0;
     if (selectedPackage) base += selectedPackage.price_cents;
     Object.entries(selectedAddOns).forEach(([id, qty]) => {
       const a = addOns.find((x) => x.id === id);
       if (a && qty > 0) base += a.price_cents * qty;
     });
-    if (storageTerm === "study_abroad") base *= 2;
+    // Use the order's existing storage term for the multiplier
+    if (order.storage_term === "study_abroad") base *= 2;
     if (valetSelected && valetAddOn) base += valetAddOn.price_cents;
     return base;
   };
@@ -122,10 +101,10 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Delete existing order items, then re-insert
+      // Delete existing order items, then re-insert (prices enforced by DB trigger)
       await supabase.from("order_items").delete().eq("order_id", order.id);
 
-      const newItems: any[] = [];
+      const newItems: { order_id: string; add_on_id: string; quantity: number; price_cents: number; description: string }[] = [];
       Object.entries(selectedAddOns)
         .filter(([, qty]) => qty > 0)
         .forEach(([addOnId, qty]) => {
@@ -134,7 +113,7 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
             order_id: order.id,
             add_on_id: addOnId,
             quantity: qty,
-            price_cents: a.price_cents * qty,
+            price_cents: a.price_cents * qty, // overwritten by trigger
             description: a.name,
           });
         });
@@ -143,7 +122,7 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
           order_id: order.id,
           add_on_id: valetAddOn.id,
           quantity: 1,
-          price_cents: valetAddOn.price_cents,
+          price_cents: valetAddOn.price_cents, // overwritten by trigger
           description: "Valet Service",
         });
       }
@@ -152,14 +131,10 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
         if (itemErr) throw itemErr;
       }
 
-      // Use secure RPC to update order (recalculates total server-side)
+      // Use secure RPC to update order (only safe fields, total recalculated server-side)
       const { error: rpcErr } = await supabase.rpc("update_order_details", {
         _order_id: order.id,
         _package_id: packageId || null,
-        _dropoff_date_id: dropoffDateId || null,
-        _pickup_date_id: pickupDateId || null,
-        _storage_term: storageTerm,
-        _comments: comments || null,
       });
       if (rpcErr) throw rpcErr;
 
@@ -173,14 +148,14 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
     }
   };
 
-  const total = calculateTotal();
+  const displayTotal = calculateDisplayTotal();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Order</DialogTitle>
-          <DialogDescription>Change your package, dates, add-ons, or comments.</DialogDescription>
+          <DialogDescription>Change your box package or add-on quantities. Prices are calculated automatically.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
@@ -202,32 +177,6 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
                   <div className="mt-1 font-bold text-primary">${(pkg.price_cents / 100).toFixed(0)}</div>
                 </button>
               ))}
-            </div>
-          </div>
-
-          {/* Storage Term */}
-          <div className="space-y-2">
-            <Label>Storage Term</Label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setStorageTerm("summer")}
-                className={`rounded-lg border p-3 text-left transition-colors ${
-                  storageTerm === "summer" ? "border-primary bg-accent" : "border-border hover:border-primary/40"
-                }`}
-              >
-                <div className="font-semibold text-sm text-foreground">Summer</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStorageTerm("study_abroad")}
-                className={`rounded-lg border p-3 text-left transition-colors ${
-                  storageTerm === "study_abroad" ? "border-primary bg-accent" : "border-border hover:border-primary/40"
-                }`}
-              >
-                <div className="font-semibold text-sm text-foreground">Summer + Study Abroad</div>
-                <div className="text-xs text-primary">2× storage price</div>
-              </button>
             </div>
           </div>
 
@@ -253,7 +202,9 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
                 }`}
               >
                 <div className="font-semibold text-sm text-foreground">Valet Service</div>
-                <div className="text-xs text-primary">+$300</div>
+                {valetAddOn && (
+                  <div className="text-xs text-primary">+${(valetAddOn.price_cents / 100).toFixed(0)}</div>
+                )}
               </button>
             </div>
           </div>
@@ -266,7 +217,7 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
                 <div key={addOn.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
                   <div>
                     <span className="text-sm font-medium text-foreground">{addOn.name}</span>
-                    <span className="ml-2 text-xs text-primary">+${(addOn.price_cents / 100).toFixed(0)}</span>
+                    <span className="ml-2 text-xs text-primary">+${(addOn.price_cents / 100).toFixed(0)} each</span>
                   </div>
                   <Input
                     type="number"
@@ -274,7 +225,7 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
                     className="w-20"
                     value={selectedAddOns[addOn.id] || 0}
                     onChange={(e) =>
-                      setSelectedAddOns({ ...selectedAddOns, [addOn.id]: parseInt(e.target.value) || 0 })
+                      setSelectedAddOns({ ...selectedAddOns, [addOn.id]: Math.max(0, parseInt(e.target.value) || 0) })
                     }
                   />
                 </div>
@@ -282,47 +233,12 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved, studentSchool }: 
             </div>
           )}
 
-          {/* Dates */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Drop-off Date</Label>
-              <Select value={dropoffDateId} onValueChange={setDropoffDateId}>
-                <SelectTrigger><SelectValue placeholder="Select date" /></SelectTrigger>
-                <SelectContent>
-                  {dropoffDates.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {new Date(d.available_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Pick-up Date</Label>
-              <Select value={pickupDateId} onValueChange={setPickupDateId}>
-                <SelectTrigger><SelectValue placeholder="Select date" /></SelectTrigger>
-                <SelectContent>
-                  {pickupDates.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {new Date(d.available_date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Comments */}
-          <div className="space-y-2">
-            <Label>Comments / Special Instructions</Label>
-            <Textarea value={comments} onChange={(e) => setComments(e.target.value)} rows={3} />
-          </div>
-
-          {/* Total preview */}
+          {/* Estimated Total (read-only) */}
           <div className="rounded-lg bg-muted/50 p-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">New Total</span>
-            <span className="text-lg font-bold text-primary">${(total / 100).toFixed(2)}</span>
+            <span className="text-sm font-medium text-foreground">Estimated Total</span>
+            <span className="text-lg font-bold text-primary">${(displayTotal / 100).toFixed(2)}</span>
           </div>
+          <p className="text-xs text-muted-foreground">Final price is confirmed server-side based on current catalog rates.</p>
         </div>
 
         <DialogFooter>
