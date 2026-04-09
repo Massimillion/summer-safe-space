@@ -99,7 +99,18 @@ const OrderCard = ({ order, studentSchool, onOrderUpdated }: OrderCardProps) => 
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-muted-foreground hover:text-primary"
+                    onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                    Edit
+                  </Button>
+                )}
                 <Badge className={cn("border-0", statusColors[order.status] || "")}>
                   {statusLabels[order.status] || order.status}
                 </Badge>
