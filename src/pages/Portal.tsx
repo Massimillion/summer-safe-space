@@ -77,7 +77,7 @@ const Portal = () => {
       setLoading(false);
     };
     fetchData();
-  }, [user]);
+  }, [user, refreshKey]);
 
   if (!user) {
     return (
