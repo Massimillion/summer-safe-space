@@ -223,6 +223,16 @@ const OrderCard = ({ order, studentSchool, onOrderUpdated }: OrderCardProps) => 
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      {canEdit && (
+        <EditOrderDialog
+          order={order}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSaved={onOrderUpdated || (() => {})}
+          studentSchool={studentSchool || null}
+        />
+      )}
     </Collapsible>
   );
 };
