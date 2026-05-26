@@ -271,7 +271,7 @@ const AdminOrders = () => {
                       <div className="text-xs text-muted-foreground">Pick-Up</div>
                       <div>
                         {selectedDetails?.pickup
-                          ? `${new Date(selectedDetails.pickup.available_date).toLocaleDateString()}${selectedDetails.pickup.time_slot ? ` · ${selectedDetails.pickup.time_slot}` : ""}`
+                          ? `${new Date(selectedDetails.pickup.available_date + "T12:00:00").toLocaleDateString()}${selectedDetails.pickup.time_slot ? ` · ${selectedDetails.pickup.time_slot}` : ""}`
                           : "—"}
                       </div>
                     </div>
