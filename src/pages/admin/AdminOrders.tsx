@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil } from "lucide-react";
 import EditOrderDialog from "@/components/admin/EditOrderDialog";
@@ -38,6 +38,9 @@ const AdminOrders = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<(Order & { student?: Student }) | null>(null);
+  const [selectedDetails, setSelectedDetails] = useState<any | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [editOrder, setEditOrder] = useState<(Order & { student?: Student }) | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const { toast } = useToast();
@@ -54,6 +57,40 @@ const AdminOrders = () => {
       student: studentsData.find((s) => s.id === o.student_id),
     }));
     setOrders(ordersWithStudents);
+  };
+
+  const openView = async (order: Order & { student?: Student }) => {
+    setSelectedOrder(order);
+    setViewOpen(true);
+    setDetailsLoading(true);
+    setSelectedDetails(null);
+
+    const [pkgRes, itemsRes, dropRes, pickRes, dormRes, paymentsRes] = await Promise.all([
+      order.package_id
+        ? supabase.from("packages").select("name, num_boxes, price_cents").eq("id", order.package_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      supabase.from("order_items").select("*").eq("order_id", order.id),
+      order.dropoff_date_id
+        ? supabase.from("available_dates").select("available_date, time_slot").eq("id", order.dropoff_date_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      order.pickup_date_id
+        ? supabase.from("available_dates").select("available_date, time_slot").eq("id", order.pickup_date_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      order.student?.dorm_id
+        ? supabase.from("dorms").select("name").eq("id", order.student.dorm_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      supabase.from("payments").select("*").eq("order_id", order.id).order("created_at"),
+    ]);
+
+    setSelectedDetails({
+      pkg: pkgRes.data,
+      items: itemsRes.data || [],
+      dropoff: dropRes.data,
+      pickup: pickRes.data,
+      dorm: dormRes.data,
+      payments: paymentsRes.data || [],
+    });
+    setDetailsLoading(false);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -162,28 +199,7 @@ const AdminOrders = () => {
                       >
                         <Pencil className="mr-1 h-3 w-3" /> Edit
                       </Button>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(order)}>View</Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-lg">
-                          <DialogHeader>
-                            <DialogTitle className="font-display">Order Details</DialogTitle>
-                          </DialogHeader>
-                          {selectedOrder && (
-                            <div className="space-y-3 text-sm">
-                              <div><span className="font-semibold">Student:</span> {selectedOrder.student?.first_name} {selectedOrder.student?.last_name}</div>
-                              <div><span className="font-semibold">Email:</span> {selectedOrder.student?.email}</div>
-                              <div><span className="font-semibold">Phone:</span> {selectedOrder.student?.phone || "—"}</div>
-                              <div><span className="font-semibold">School:</span> {selectedOrder.student?.school === "cu_boulder" ? "CU Boulder" : "DU"}</div>
-                              <div><span className="font-semibold">Storage Term:</span> {termLabels[selectedOrder.storage_term] || selectedOrder.storage_term}</div>
-                              <div><span className="font-semibold">Status:</span> {statusLabels[selectedOrder.status]}</div>
-                              <div><span className="font-semibold">Total:</span> ${(selectedOrder.total_cents / 100).toFixed(2)}</div>
-                              {selectedOrder.comments && <div><span className="font-semibold">Comments:</span> {selectedOrder.comments}</div>}
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
+                      <Button variant="ghost" size="sm" onClick={() => openView(order)}>View</Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -192,6 +208,132 @@ const AdminOrders = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display">Order Details</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4 text-sm">
+              {/* Student */}
+              <section className="space-y-1">
+                <h3 className="font-semibold text-foreground">Student</h3>
+                <div>{selectedOrder.student?.first_name} {selectedOrder.student?.last_name}</div>
+                <div className="text-muted-foreground">{selectedOrder.student?.email}</div>
+                <div className="text-muted-foreground">{selectedOrder.student?.phone || "No phone"}</div>
+                <div className="text-muted-foreground">
+                  {selectedOrder.student?.school === "cu_boulder" ? "CU Boulder" : "DU"}
+                  {selectedDetails?.dorm?.name ? ` — ${selectedDetails.dorm.name}` : ""}
+                  {selectedOrder.student?.is_off_campus ? " (Off-Campus)" : ""}
+                </div>
+                {selectedOrder.student?.address_line && (
+                  <div className="text-muted-foreground">{selectedOrder.student.address_line}</div>
+                )}
+              </section>
+
+              {/* Order summary */}
+              <section className="grid grid-cols-2 gap-3 border-t pt-3">
+                <div>
+                  <div className="text-xs text-muted-foreground">Status</div>
+                  <div>{statusLabels[selectedOrder.status]}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Storage Term</div>
+                  <div>{termLabels[selectedOrder.storage_term] || selectedOrder.storage_term}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Booked On</div>
+                  <div>{new Date(selectedOrder.created_at).toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Deposit Paid</div>
+                  <div>{selectedOrder.deposit_paid ? "Yes" : "No"}</div>
+                </div>
+              </section>
+
+              {/* Schedule */}
+              <section className="border-t pt-3">
+                <h3 className="mb-1 font-semibold text-foreground">Schedule</h3>
+                {detailsLoading ? (
+                  <div className="text-muted-foreground">Loading…</div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Drop-Off</div>
+                      <div>
+                        {selectedDetails?.dropoff
+                          ? `${new Date(selectedDetails.dropoff.available_date).toLocaleDateString()}${selectedDetails.dropoff.time_slot ? ` · ${selectedDetails.dropoff.time_slot}` : ""}`
+                          : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Pick-Up</div>
+                      <div>
+                        {selectedDetails?.pickup
+                          ? `${new Date(selectedDetails.pickup.available_date).toLocaleDateString()}${selectedDetails.pickup.time_slot ? ` · ${selectedDetails.pickup.time_slot}` : ""}`
+                          : "—"}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Package & items */}
+              <section className="border-t pt-3">
+                <h3 className="mb-1 font-semibold text-foreground">Package & Items</h3>
+                {detailsLoading ? (
+                  <div className="text-muted-foreground">Loading…</div>
+                ) : (
+                  <div className="space-y-1">
+                    {selectedDetails?.pkg ? (
+                      <div className="flex justify-between">
+                        <span>{selectedDetails.pkg.name} — {selectedDetails.pkg.num_boxes} box{selectedDetails.pkg.num_boxes !== 1 ? "es" : ""}</span>
+                        <span>${(selectedDetails.pkg.price_cents / 100).toFixed(2)}</span>
+                      </div>
+                    ) : (
+                      <div className="text-muted-foreground">No package selected</div>
+                    )}
+                    {(selectedDetails?.items || []).map((it: any) => (
+                      <div key={it.id} className="flex justify-between">
+                        <span>{it.description || "Item"}{it.quantity > 1 ? ` × ${it.quantity}` : ""}</span>
+                        <span>${(it.price_cents / 100).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between border-t pt-2 font-semibold">
+                      <span>Total</span>
+                      <span>${(selectedOrder.total_cents / 100).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Payments */}
+              {selectedDetails?.payments?.length > 0 && (
+                <section className="border-t pt-3">
+                  <h3 className="mb-1 font-semibold text-foreground">Payments</h3>
+                  <div className="space-y-1">
+                    {selectedDetails.payments.map((p: any) => (
+                      <div key={p.id} className="flex justify-between text-muted-foreground">
+                        <span>{p.description || p.payment_type} · {new Date(p.created_at).toLocaleDateString()}</span>
+                        <span>${(p.amount_cents / 100).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Comments */}
+              {selectedOrder.comments && (
+                <section className="border-t pt-3">
+                  <h3 className="mb-1 font-semibold text-foreground">Comments / Notes</h3>
+                  <p className="whitespace-pre-wrap text-muted-foreground">{selectedOrder.comments}</p>
+                </section>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <EditOrderDialog
         order={editOrder}
