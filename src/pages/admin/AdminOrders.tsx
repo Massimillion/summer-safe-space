@@ -199,28 +199,7 @@ const AdminOrders = () => {
                       >
                         <Pencil className="mr-1 h-3 w-3" /> Edit
                       </Button>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(order)}>View</Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-lg">
-                          <DialogHeader>
-                            <DialogTitle className="font-display">Order Details</DialogTitle>
-                          </DialogHeader>
-                          {selectedOrder && (
-                            <div className="space-y-3 text-sm">
-                              <div><span className="font-semibold">Student:</span> {selectedOrder.student?.first_name} {selectedOrder.student?.last_name}</div>
-                              <div><span className="font-semibold">Email:</span> {selectedOrder.student?.email}</div>
-                              <div><span className="font-semibold">Phone:</span> {selectedOrder.student?.phone || "—"}</div>
-                              <div><span className="font-semibold">School:</span> {selectedOrder.student?.school === "cu_boulder" ? "CU Boulder" : "DU"}</div>
-                              <div><span className="font-semibold">Storage Term:</span> {termLabels[selectedOrder.storage_term] || selectedOrder.storage_term}</div>
-                              <div><span className="font-semibold">Status:</span> {statusLabels[selectedOrder.status]}</div>
-                              <div><span className="font-semibold">Total:</span> ${(selectedOrder.total_cents / 100).toFixed(2)}</div>
-                              {selectedOrder.comments && <div><span className="font-semibold">Comments:</span> {selectedOrder.comments}</div>}
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
+                      <Button variant="ghost" size="sm" onClick={() => openView(order)}>View</Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -229,6 +208,132 @@ const AdminOrders = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display">Order Details</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4 text-sm">
+              {/* Student */}
+              <section className="space-y-1">
+                <h3 className="font-semibold text-foreground">Student</h3>
+                <div>{selectedOrder.student?.first_name} {selectedOrder.student?.last_name}</div>
+                <div className="text-muted-foreground">{selectedOrder.student?.email}</div>
+                <div className="text-muted-foreground">{selectedOrder.student?.phone || "No phone"}</div>
+                <div className="text-muted-foreground">
+                  {selectedOrder.student?.school === "cu_boulder" ? "CU Boulder" : "DU"}
+                  {selectedDetails?.dorm?.name ? ` — ${selectedDetails.dorm.name}` : ""}
+                  {selectedOrder.student?.is_off_campus ? " (Off-Campus)" : ""}
+                </div>
+                {selectedOrder.student?.address_line && (
+                  <div className="text-muted-foreground">{selectedOrder.student.address_line}</div>
+                )}
+              </section>
+
+              {/* Order summary */}
+              <section className="grid grid-cols-2 gap-3 border-t pt-3">
+                <div>
+                  <div className="text-xs text-muted-foreground">Status</div>
+                  <div>{statusLabels[selectedOrder.status]}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Storage Term</div>
+                  <div>{termLabels[selectedOrder.storage_term] || selectedOrder.storage_term}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Booked On</div>
+                  <div>{new Date(selectedOrder.created_at).toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Deposit Paid</div>
+                  <div>{selectedOrder.deposit_paid ? "Yes" : "No"}</div>
+                </div>
+              </section>
+
+              {/* Schedule */}
+              <section className="border-t pt-3">
+                <h3 className="mb-1 font-semibold text-foreground">Schedule</h3>
+                {detailsLoading ? (
+                  <div className="text-muted-foreground">Loading…</div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Drop-Off</div>
+                      <div>
+                        {selectedDetails?.dropoff
+                          ? `${new Date(selectedDetails.dropoff.available_date).toLocaleDateString()}${selectedDetails.dropoff.time_slot ? ` · ${selectedDetails.dropoff.time_slot}` : ""}`
+                          : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Pick-Up</div>
+                      <div>
+                        {selectedDetails?.pickup
+                          ? `${new Date(selectedDetails.pickup.available_date).toLocaleDateString()}${selectedDetails.pickup.time_slot ? ` · ${selectedDetails.pickup.time_slot}` : ""}`
+                          : "—"}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Package & items */}
+              <section className="border-t pt-3">
+                <h3 className="mb-1 font-semibold text-foreground">Package & Items</h3>
+                {detailsLoading ? (
+                  <div className="text-muted-foreground">Loading…</div>
+                ) : (
+                  <div className="space-y-1">
+                    {selectedDetails?.pkg ? (
+                      <div className="flex justify-between">
+                        <span>{selectedDetails.pkg.name} — {selectedDetails.pkg.num_boxes} box{selectedDetails.pkg.num_boxes !== 1 ? "es" : ""}</span>
+                        <span>${(selectedDetails.pkg.price_cents / 100).toFixed(2)}</span>
+                      </div>
+                    ) : (
+                      <div className="text-muted-foreground">No package selected</div>
+                    )}
+                    {(selectedDetails?.items || []).map((it: any) => (
+                      <div key={it.id} className="flex justify-between">
+                        <span>{it.description || "Item"}{it.quantity > 1 ? ` × ${it.quantity}` : ""}</span>
+                        <span>${(it.price_cents / 100).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between border-t pt-2 font-semibold">
+                      <span>Total</span>
+                      <span>${(selectedOrder.total_cents / 100).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Payments */}
+              {selectedDetails?.payments?.length > 0 && (
+                <section className="border-t pt-3">
+                  <h3 className="mb-1 font-semibold text-foreground">Payments</h3>
+                  <div className="space-y-1">
+                    {selectedDetails.payments.map((p: any) => (
+                      <div key={p.id} className="flex justify-between text-muted-foreground">
+                        <span>{p.description || p.payment_type} · {new Date(p.created_at).toLocaleDateString()}</span>
+                        <span>${(p.amount_cents / 100).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Comments */}
+              {selectedOrder.comments && (
+                <section className="border-t pt-3">
+                  <h3 className="mb-1 font-semibold text-foreground">Comments / Notes</h3>
+                  <p className="whitespace-pre-wrap text-muted-foreground">{selectedOrder.comments}</p>
+                </section>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <EditOrderDialog
         order={editOrder}
