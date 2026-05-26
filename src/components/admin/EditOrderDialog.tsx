@@ -43,6 +43,8 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved }: EditOrderDialog
   const [status, setStatus] = useState("");
   const [storageTerm, setStorageTerm] = useState("summer");
   const [packageId, setPackageId] = useState<string | null>(null);
+  const [dropoffDateId, setDropoffDateId] = useState<string | null>(null);
+  const [pickupDateId, setPickupDateId] = useState<string | null>(null);
   const [totalCents, setTotalCents] = useState(0);
   const [comments, setComments] = useState("");
 
@@ -50,6 +52,8 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved }: EditOrderDialog
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
+  const [dropoffDates, setDropoffDates] = useState<AvailableDate[]>([]);
+  const [pickupDates, setPickupDates] = useState<AvailableDate[]>([]);
 
   // New item form
   const [newAddOnId, setNewAddOnId] = useState("");
