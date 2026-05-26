@@ -243,7 +243,7 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved }: EditOrderDialog
                     <SelectItem value="none">— None —</SelectItem>
                     {dropoffDates.map((d) => (
                       <SelectItem key={d.id} value={d.id}>
-                        {new Date(d.available_date).toLocaleDateString()}{d.time_slot ? ` · ${d.time_slot}` : ""}
+                        {new Date(d.available_date + "T12:00:00").toLocaleDateString()}{d.time_slot ? ` · ${d.time_slot}` : ""}
                       </SelectItem>
                     ))}
                     {dropoffDateId && !dropoffDates.find((d) => d.id === dropoffDateId) && (
@@ -260,7 +260,7 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved }: EditOrderDialog
                     <SelectItem value="none">— None —</SelectItem>
                     {pickupDates.map((d) => (
                       <SelectItem key={d.id} value={d.id}>
-                        {new Date(d.available_date).toLocaleDateString()}{d.time_slot ? ` · ${d.time_slot}` : ""}
+                        {new Date(d.available_date + "T12:00:00").toLocaleDateString()}{d.time_slot ? ` · ${d.time_slot}` : ""}
                       </SelectItem>
                     ))}
                     {pickupDateId && !pickupDates.find((d) => d.id === pickupDateId) && (
