@@ -233,6 +233,44 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved }: EditOrderDialog
               </Select>
             </div>
 
+            {/* Drop-off / Pick-up dates */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Drop-Off Date</Label>
+                <Select value={dropoffDateId || "none"} onValueChange={(v) => setDropoffDateId(v === "none" ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— None —</SelectItem>
+                    {dropoffDates.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {new Date(d.available_date).toLocaleDateString()}{d.time_slot ? ` · ${d.time_slot}` : ""}
+                      </SelectItem>
+                    ))}
+                    {dropoffDateId && !dropoffDates.find((d) => d.id === dropoffDateId) && (
+                      <SelectItem value={dropoffDateId}>Current selection (inactive)</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Pick-Up Date</Label>
+                <Select value={pickupDateId || "none"} onValueChange={(v) => setPickupDateId(v === "none" ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— None —</SelectItem>
+                    {pickupDates.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {new Date(d.available_date).toLocaleDateString()}{d.time_slot ? ` · ${d.time_slot}` : ""}
+                      </SelectItem>
+                    ))}
+                    {pickupDateId && !pickupDates.find((d) => d.id === pickupDateId) && (
+                      <SelectItem value={pickupDateId}>Current selection (inactive)</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {/* Order Items */}
             <div className="space-y-2">
               <Label>Items / Add-Ons</Label>
