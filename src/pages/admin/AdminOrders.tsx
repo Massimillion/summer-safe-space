@@ -38,6 +38,9 @@ const AdminOrders = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<(Order & { student?: Student }) | null>(null);
+  const [selectedDetails, setSelectedDetails] = useState<any | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
   const [editOrder, setEditOrder] = useState<(Order & { student?: Student }) | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const { toast } = useToast();
@@ -54,6 +57,40 @@ const AdminOrders = () => {
       student: studentsData.find((s) => s.id === o.student_id),
     }));
     setOrders(ordersWithStudents);
+  };
+
+  const openView = async (order: Order & { student?: Student }) => {
+    setSelectedOrder(order);
+    setViewOpen(true);
+    setDetailsLoading(true);
+    setSelectedDetails(null);
+
+    const [pkgRes, itemsRes, dropRes, pickRes, dormRes, paymentsRes] = await Promise.all([
+      order.package_id
+        ? supabase.from("packages").select("name, num_boxes, price_cents").eq("id", order.package_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      supabase.from("order_items").select("*").eq("order_id", order.id),
+      order.dropoff_date_id
+        ? supabase.from("available_dates").select("available_date, time_slot").eq("id", order.dropoff_date_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      order.pickup_date_id
+        ? supabase.from("available_dates").select("available_date, time_slot").eq("id", order.pickup_date_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      order.student?.dorm_id
+        ? supabase.from("dorms").select("name").eq("id", order.student.dorm_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      supabase.from("payments").select("*").eq("order_id", order.id).order("created_at"),
+    ]);
+
+    setSelectedDetails({
+      pkg: pkgRes.data,
+      items: itemsRes.data || [],
+      dropoff: dropRes.data,
+      pickup: pickRes.data,
+      dorm: dormRes.data,
+      payments: paymentsRes.data || [],
+    });
+    setDetailsLoading(false);
   };
 
   useEffect(() => { fetchData(); }, []);
