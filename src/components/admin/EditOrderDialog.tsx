@@ -64,19 +64,30 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved }: EditOrderDialog
     setStatus(order.status);
     setStorageTerm(order.storage_term || "summer");
     setPackageId(order.package_id);
+    setDropoffDateId(order.dropoff_date_id);
+    setPickupDateId(order.pickup_date_id);
     setTotalCents(order.total_cents);
     setComments(order.comments || "");
     setLoading(true);
 
+    const school = order.student?.school;
     const fetch = async () => {
-      const [itemsRes, pkgRes, addOnRes] = await Promise.all([
+      const [itemsRes, pkgRes, addOnRes, dropRes, pickRes] = await Promise.all([
         supabase.from("order_items").select("*").eq("order_id", order.id),
         supabase.from("packages").select("*").order("sort_order"),
         supabase.from("add_ons").select("*").order("sort_order"),
+        school
+          ? supabase.from("available_dates").select("*").eq("school", school).eq("date_type", "dropoff").eq("is_active", true).order("available_date")
+          : Promise.resolve({ data: [] } as any),
+        school
+          ? supabase.from("available_dates").select("*").eq("school", school).eq("date_type", "pickup").eq("is_active", true).order("available_date")
+          : Promise.resolve({ data: [] } as any),
       ]);
       if (itemsRes.data) setOrderItems(itemsRes.data);
       if (pkgRes.data) setPackages(pkgRes.data);
       if (addOnRes.data) setAddOns(addOnRes.data);
+      if (dropRes.data) setDropoffDates(dropRes.data);
+      if (pickRes.data) setPickupDates(pickRes.data);
       setLoading(false);
     };
     fetch();
@@ -93,6 +104,8 @@ const EditOrderDialog = ({ order, open, onOpenChange, onSaved }: EditOrderDialog
         status: status as any,
         storage_term: storageTerm,
         package_id: packageId,
+        dropoff_date_id: dropoffDateId,
+        pickup_date_id: pickupDateId,
         total_cents: totalCents,
         comments: comments || null,
       })
