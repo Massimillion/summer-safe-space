@@ -15,6 +15,7 @@ type Student = Tables<"students">;
 type OrderItem = Tables<"order_items">;
 type Package = Tables<"packages">;
 type AddOn = Tables<"add_ons">;
+type AvailableDate = Tables<"available_dates">;
 
 interface EditOrderDialogProps {
   order: (Order & { student?: Student }) | null;
